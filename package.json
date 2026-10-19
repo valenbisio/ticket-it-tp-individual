@@ -1,14 +1,17 @@
 {
   "name": "dds-repo-base",
   "version": "1.0.0",
+  "private": true,
+  "description": "Trabajo Práctico Individual de Desarrollo con IA (DDS, UTN FRBA). Monorepo con un backend en Node + Express (packages/backend) y un frontend en React Native con Expo (packages/frontend).",
   "main": "index.js",
   "workspaces": [
-    "packages/*"
+    "packages/backend"
   ],
   "scripts": {
+    "setup": "npm install && npm install --prefix packages/frontend",
     "start:backend": "npm start --workspace=backend",
     "dev:backend": "npm run dev --workspace=backend",
-    "start:frontend": "npm start --workspace=frontend",
+    "start:frontend": "npm start --prefix packages/frontend",
     "start:dev": "concurrently \"npm run dev:backend\" \"npm run start:frontend\"",
     "lint": "eslint .",
     "format": "prettier . --write"
@@ -16,7 +19,19 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/valenbisio/ticket-it-tp-individual.git"
+  },
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/valenbisio/ticket-it-tp-individual/issues"
+  },
+  "homepage": "https://github.com/valenbisio/ticket-it-tp-individual#readme",
+  "dependencies": {
+    "express": "^5.3.0",
+    "zod": "^4.6.7"
+  },
   "devDependencies": {
     "@eslint/js": "^9.31.0",
     "concurrently": "^9.2.0",
