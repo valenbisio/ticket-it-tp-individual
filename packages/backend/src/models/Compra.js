@@ -1,15 +1,19 @@
+import { randomUUID } from "node:crypto";
+
 import { EstadoCompra } from "./EstadoCompra.js";
+import { diasEntre } from "../utils/fechas.js";
 
 export class Compra {
   constructor({
+    id = randomUUID(),
     comprador, // Usuario
     evento, // Evento
     tipoEntrada, // TipoEntrada
     cantidad,
-    total,
     estado = EstadoCompra.PENDIENTE, // EstadoCompra
     mensajes = [], // Mensaje[]
   }) {
+    this.id = id;
     this.comprador = comprador;
     this.evento = evento;
     this.tipoEntrada = tipoEntrada;
@@ -28,5 +32,25 @@ export class Compra {
 
   agregarMensaje(mensaje) {
     this.mensajes.push(mensaje);
+  }
+
+  estaConfirmada() {
+    return this.estado === EstadoCompra.CONFIRMADA;
+  }
+
+  /**
+   * Días de calendario que faltan para el evento.
+   *
+   * Solo tiene sentido para compras confirmadas: si la compra está en cualquier
+   * otro estado devuelve `null`, ya que el comprador todavía no tiene acceso
+   * garantizado al evento.
+   *
+   * Devuelve 0 cuando el evento es hoy y un valor negativo si el evento ya pasó.
+   */
+  diasRestantesParaEvento(hoy = new Date()) {
+    if (!this.estaConfirmada() || !this.evento?.fecha) {
+      return null;
+    }
+    return diasEntre(this.evento.fecha, hoy);
   }
 }
