@@ -10,13 +10,13 @@ import { EventoRepository } from "../repositories/EventoRepository.js";
 import { CategoriaRepository } from "../repositories/CategoriaRepository.js";
 import { validarSchema } from "../middlewares/validarSchema.js";
 import { crearEventoSchema } from "../schemas/eventoSchema.js";
+import { crearCompraSchema } from "../schemas/compraSchema.js";
 
 const compraRepository = new CompraRepository();
-const compraService = new CompraService({ compraRepository });
-const compraController = new CompraController({ compraService });
-
 const eventoRepository = new EventoRepository();
 const categoriaRepository = new CategoriaRepository();
+const compraService = new CompraService({ compraRepository, eventoRepository });
+const compraController = new CompraController({ compraService });
 const eventoService = new EventoService({ eventoRepository, categoriaRepository });
 const eventoController = new EventoController({ eventoService });
 
@@ -46,6 +46,19 @@ const router = express.Router();
  *           type: string
  *         description: ID de la categoría (ver /api/eventos/categorias)
  *         example: recital
+ *       - in: query
+ *         name: ordenarPor
+ *         schema:
+ *           type: string
+ *           enum: [precio, fecha, puntajeOrganizador]
+ *         description: Campo por el cual ordenar
+ *       - in: query
+ *         name: orden
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: asc
+ *         description: Dirección del ordenamiento
  *     responses:
  *       200:
  *         description: Eventos encontrados
@@ -154,7 +167,8 @@ router
  */
 router
   .route("/:eventoId/compras")
-  .get((req, res, next) => compraController.obtenerComprasDeEvento(req, res));
+  .get((req, res, next) => compraController.obtenerComprasDeEvento(req, res))
+  .post(validarSchema(crearCompraSchema), (req, res, next) => compraController.realizarCompra(req, res, next));
 
 /**
  * @swagger

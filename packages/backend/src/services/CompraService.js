@@ -4,6 +4,7 @@ import { NotFoundError } from "../errors/NotFoundError.js";
 import { ConflictError } from "../errors/ConflictError.js";
 import { EstadoCompra } from "../models/EstadoCompra.js";
 import { Resenia } from "../models/Resenia.js";
+import { Compra } from "../models/Compra.js";
 
 /**
  * Service de compras.
@@ -12,8 +13,9 @@ import { Resenia } from "../models/Resenia.js";
  * El controller delega en este service todo lo que no sea HTTP.
  */
 export class CompraService {
-  constructor({ compraRepository, hoy } = {}) {
+  constructor({ compraRepository, eventoRepository, hoy } = {}) {
     this.compraRepository = compraRepository;
+    this.eventoRepository = eventoRepository;
     this.hoy = hoy;
   }
 
@@ -34,6 +36,27 @@ export class CompraService {
     const compras = this.compraRepository.obtenerPorEvento(eventoId);
 
     return serializarComprasDeEvento(evento, compras, this.hoy ?? new Date());
+  }
+
+  realizarCompra(eventoId, compradorId, tipoEntradaNombre, cantidad) {
+    const evento = this.eventoRepository.obtenerPorId(eventoId);
+    if (!evento) throw new NotFoundError(`Evento no encontrado: ${eventoId}`);
+    const tipoEntrada = evento.tiposEntrada.find(
+      (tipo) => tipo.nombre.toLowerCase() === tipoEntradaNombre.toLowerCase(),
+    );
+    if (!tipoEntrada) throw new NotFoundError(`Tipo de entrada no encontrado: ${tipoEntradaNombre}`);
+    if (!tipoEntrada.hayCupoPara(cantidad)) {
+      throw new ConflictError("No hay suficiente cupo para este tipo de entrada");
+    }
+
+    tipoEntrada.reducirCupo(cantidad);
+    const compra = new Compra({
+      comprador: { id: compradorId },
+      evento,
+      tipoEntrada,
+      cantidad,
+    });
+    return this.compraRepository.agregar(compra);
   }
 
   enviarMensaje(compraId, usuarioId, texto) {

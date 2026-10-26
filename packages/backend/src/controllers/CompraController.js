@@ -86,5 +86,19 @@ export class CompraController {
       return next(error);
     }
   }
+
+  realizarCompra(req, res, next) {
+    try {
+      const compra = this.compraService.realizarCompra(
+        req.params.eventoId,
+        req.body.compradorId,
+        req.body.tipoEntrada,
+        req.body.cantidad,
+      );
+      return res.status(201).json({ compra });
+    } catch (error) {
+      return next(error);
+    }
+  }
 }
 

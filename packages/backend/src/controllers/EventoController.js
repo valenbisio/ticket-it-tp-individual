@@ -6,12 +6,14 @@ export class EventoController {
   }
 
   buscarEventos(req, res, next) {
-    const { q, categoria } = req.query;
+    const { q, categoria, ordenarPor, orden } = req.query;
 
     try {
       const eventos = this.eventoService.buscarEventos({
         texto: q,
         categoria,
+        ordenarPor,
+        orden,
       });
 
       return res.json({total: eventos.length,eventos,});

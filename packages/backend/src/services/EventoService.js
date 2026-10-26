@@ -40,11 +40,11 @@ export class EventoService {
     return this.eventoRepository.agregar(evento);
   }
 
-  buscarEventos({ texto, categoria } = {}) {
+  buscarEventos({ texto, categoria, ordenarPor, orden = "asc" } = {}) {
     const categoriaBuscada = this.#resolverCategoria(categoria);
     const palabras = texto ? normalizar(texto).split(/\s+/).filter(Boolean) : [];
 
-    return this.eventoRepository
+    const eventos = this.eventoRepository
       .obtenerTodos()
       .filter((evento) => {
         if (categoriaBuscada && evento.categoria.id !== categoriaBuscada.id) {
@@ -65,6 +65,8 @@ export class EventoService {
         return palabras.every((palabra) => contenido.includes(palabra));
       })
       .map((evento) => this.#serializar(evento));
+
+    return this.#ordenarEventos(eventos, ordenarPor, orden);
   }
 
   obtenerResenias(eventoId) {
@@ -101,11 +103,39 @@ export class EventoService {
       portada: evento.multimedia[0] ?? null,
       organizador: `${evento.organizador.nombre} ${evento.organizador.apellido}`,
       precioDesde: precios.length > 0 ? Math.min(...precios) : null,
+      puntajeOrganizador: this.#calcularPuntajeOrganizador(evento),
       resenias: evento.resenias.map((resenia) => ({
         usuarioId: resenia.comprador?.id ?? null,
         puntuacion: resenia.puntuacion,
         detalle: resenia.detalle,
       })),
     };
+  }
+
+  #calcularPuntajeOrganizador(evento) {
+    if (evento.resenias.length === 0) return null;
+    const suma = evento.resenias.reduce((total, resenia) => total + resenia.puntuacion, 0);
+    return suma / evento.resenias.length;
+  }
+
+  #ordenarEventos(eventos, ordenarPor, orden = "asc") {
+    if (!ordenarPor) return eventos;
+
+    const campos = {
+      precio: "precioDesde",
+      fecha: "fecha",
+      puntajeOrganizador: "puntajeOrganizador",
+    };
+    if (!campos[ordenarPor] || !["asc", "desc"].includes(orden)) {
+      throw new BadRequestError("ordenarPor debe ser precio, fecha o puntajeOrganizador y orden asc o desc");
+    }
+
+    const campo = campos[ordenarPor];
+    const factor = orden === "desc" ? -1 : 1;
+    return eventos.sort((a, b) => {
+      const valorA = campo === "fecha" ? new Date(a[campo]).getTime() : (a[campo] ?? 0);
+      const valorB = campo === "fecha" ? new Date(b[campo]).getTime() : (b[campo] ?? 0);
+      return (valorA - valorB) * factor;
+    });
   }
 }
