@@ -1,4 +1,5 @@
 import { CompraService } from "../services/CompraService.js";
+import { serializarCompra } from "../serializers/compras.js";
 
 
 /**
@@ -48,6 +49,18 @@ export class CompraController {
           enviado: resultado.enviado,
         },
       });
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  cancelarCompra(req, res, next) {
+    try {
+      const compra = this.compraService.cancelarCompra(
+        req.params.compraId,
+        req.params.usuarioId,
+      );
+      return res.status(200).json({ compra: serializarCompra(compra) });
     } catch (error) {
       return next(error);
     }

@@ -81,4 +81,30 @@ router
   .route("/:usuarioId/compras/:compraId/mensajes")
   .post(validarSchema(enviarMensajeSchema), (req, res, next) => compraController.enviarMensaje(req, res, next));
 
+/**
+ * @swagger
+ * /api/usuarios/{usuarioId}/compras/{compraId}:
+ *   patch:
+ *     summary: Cancelar una compra antes de la realización del evento
+ *     description: Cambia el estado de la compra a CANCELADA y conserva su trazabilidad.
+ *     tags: [Compras]
+ *     parameters:
+ *       - in: path
+ *         name: usuarioId
+ *         required: true
+ *         schema: { type: string }
+ *         description: ID del comprador
+ *       - in: path
+ *         name: compraId
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200: { description: Compra cancelada }
+ *       404: { description: Compra no encontrada }
+ *       409: { description: La compra no puede cancelarse }
+ */
+router
+  .route("/:usuarioId/compras/:compraId")
+  .patch((req, res, next) => compraController.cancelarCompra(req, res, next));
+
 export default router;

@@ -2,6 +2,7 @@ import { serializarCompras, serializarComprasDeEvento } from "../serializers/com
 import { Mensaje } from "../models/Mensaje.js";
 import { NotFoundError } from "../errors/NotFoundError.js";
 import { ConflictError } from "../errors/ConflictError.js";
+import { EstadoCompra } from "../models/EstadoCompra.js";
 
 /**
  * Service de compras.
@@ -51,5 +52,27 @@ export class CompraService {
     });
     compra.agregarMensaje(mensaje);
     return mensaje;
+  }
+
+  cancelarCompra(compraId, usuarioId) {
+    const compra = this.compraRepository.obtenerPorId(compraId);
+    if (!compra) {
+      throw new NotFoundError(`Compra no encontrada: ${compraId}`);
+    }
+    if (compra.comprador?.id !== usuarioId) {
+      throw new ConflictError("Solo el comprador puede cancelar esta compra");
+    }
+    if (compra.estado === EstadoCompra.UTILIZADA) {
+      throw new ConflictError("No se puede cancelar una compra utilizada");
+    }
+    if (compra.estado === EstadoCompra.CANCELADA || compra.estado === EstadoCompra.REEMBOLSADA) {
+      throw new ConflictError("La compra ya no puede cancelarse");
+    }
+    if (!compra.evento?.fecha || new Date(compra.evento.fecha) <= new Date()) {
+      throw new ConflictError("No se puede cancelar una compra luego de realizado el evento");
+    }
+
+    compra.actualizarEstado(EstadoCompra.CANCELADA);
+    return compra;
   }
 }
