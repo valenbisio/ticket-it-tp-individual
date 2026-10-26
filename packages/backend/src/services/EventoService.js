@@ -1,4 +1,5 @@
 import { BadRequestError } from "../errors/BadRequestError.js";
+import { NotFoundError } from "../errors/NotFoundError.js";
 import { Evento, TipoEntrada } from "../models/index.js";
 
 export class EventoService {
@@ -66,6 +67,18 @@ export class EventoService {
       .map((evento) => this.#serializar(evento));
   }
 
+  obtenerResenias(eventoId) {
+    const evento = this.eventoRepository.obtenerPorId(eventoId);
+    if (!evento) {
+      throw new NotFoundError(`Evento no encontrado: ${eventoId}`);
+    }
+    return evento.resenias.map((resenia) => ({
+      usuarioId: resenia.comprador?.id ?? null,
+      puntuacion: resenia.puntuacion,
+      detalle: resenia.detalle,
+    }));
+  }
+
   #resolverCategoria(id) {
     if (!id) return null;
 
@@ -88,6 +101,11 @@ export class EventoService {
       portada: evento.multimedia[0] ?? null,
       organizador: `${evento.organizador.nombre} ${evento.organizador.apellido}`,
       precioDesde: precios.length > 0 ? Math.min(...precios) : null,
+      resenias: evento.resenias.map((resenia) => ({
+        usuarioId: resenia.comprador?.id ?? null,
+        puntuacion: resenia.puntuacion,
+        detalle: resenia.detalle,
+      })),
     };
   }
 }

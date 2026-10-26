@@ -156,4 +156,24 @@ router
   .route("/:eventoId/compras")
   .get((req, res, next) => compraController.obtenerComprasDeEvento(req, res));
 
+/**
+ * @swagger
+ * /api/eventos/{eventoId}/resenias:
+ *   get:
+ *     summary: Obtener reseñas de un evento
+ *     description: Devuelve las experiencias de compradores que utilizaron sus entradas.
+ *     tags: [Eventos]
+ *     parameters:
+ *       - in: path
+ *         name: eventoId
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200: { description: Reseñas del evento }
+ *       404: { description: Evento no encontrado }
+ */
+router
+  .route("/:eventoId/resenias")
+  .get((req, res, next) => eventoController.obtenerResenias(req, res, next));
+
 export default router;

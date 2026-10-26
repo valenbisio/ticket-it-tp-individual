@@ -38,6 +38,17 @@ export class EventoController {
       next(error);
     }
   }
+
+  obtenerResenias(req, res, next) {
+    try {
+      return res.status(200).json({
+        eventoId: req.params.eventoId,
+        resenias: this.eventoService.obtenerResenias(req.params.eventoId),
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 function serializarEventoCreado(evento) {
