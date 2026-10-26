@@ -43,7 +43,7 @@ const router = express.Router();
  */
 router
     .route("/:usuarioId/compras")
-    .get( (req, res) => compraController.obtenerComprasDeUsuario(req, res),
+    .get( (req, res, next) => compraController.obtenerComprasDeUsuario(req, res),
 );
 
 export default router;

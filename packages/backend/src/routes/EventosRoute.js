@@ -1,12 +1,18 @@
 import express from "express";
 import { CompraController } from "../controllers/CompraController.js";
-import { compraRepository } from "../data/seed.js";
-import { CompraService } from "../services/CompraService.js";
+import { EventoController } from "../controllers/EventoController.js";
 
-const compraService = new CompraService({ compraRepository });
+import { CompraService } from "../services/CompraService.js";
+import { EventoService } from "../services/EventoService.js";
+
+import { CompraRepository } from "../repositories/CompraRepository.js";
+import { EventoRepository } from "../repositories/EventoRepository.js";
+import { CategoriaRepository } from "../repositories/CategoriaRepository.js";
+
+const compraService = new CompraService({ CompraRepository });
 const compraController = new CompraController({ compraService });
 
-const eventoService = new EventoService({ eventoRepository, categoriaRepository });
+const eventoService = new EventoService({ EventoRepository, CategoriaRepository });
 const eventoController = new EventoController({ eventoService });
 
 const router = express.Router();
@@ -53,7 +59,7 @@ const router = express.Router();
  *       400:
  *         description: La categoría indicada no existe
  */
-router.route("/").get((req, res) => eventoController.buscarEventos(req, res));
+router.route("/").get((req, res, next) => eventoController.buscarEventos(req, res));
 
 /**
  * @swagger
@@ -78,7 +84,7 @@ router.route("/").get((req, res) => eventoController.buscarEventos(req, res));
  */
 router
   .route("/categorias")
-  .get((req, res) => eventoController.obtenerCategorias(req, res));
+  .get((req, res, next) => eventoController.obtenerCategorias(req, res));
 
 /**
  * @swagger
@@ -105,6 +111,6 @@ router
  */
 router
   .route("/:eventoId/compras")
-  .get((req, res) => compraController.obtenerComprasDeEvento(req, res));
+  .get((req, res, next) => compraController.obtenerComprasDeEvento(req, res));
 
 export default router;

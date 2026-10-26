@@ -2,8 +2,11 @@ import cors from "cors";
 import express from "express";
 import swaggerUi from "swagger-ui-express";
 
-import usuarioRoutes from "./routes/UsuarioRoutes.js";
-import eventoRoutes from "./routes/EventoRoutes.js";
+import usuarioRoutes from "./routes/UsuariosRoute.js";
+import eventoRoutes from "./routes/EventosRoute.js";
+import { errorHandler } from "./middlewares/errorHandler.js";
+import { errorLogger } from "./middlewares/errorLogger.js";
+import { notFoundHandler } from "./middlewares/notFoundHandler.js";
 import { swaggerSpec } from "./swagger.js";
 
 const app = express();
@@ -25,5 +28,12 @@ app.get("/", (req, res) => res.redirect("/api-docs"));
 // API
 app.use("/api/usuarios", usuarioRoutes);
 app.use("/api/eventos", eventoRoutes);
+
+//MIDDLEWARES
+app.use(notFoundHandler)
+
+app.use(errorLogger)
+
+app.use(errorHandler) //SIEMPRE A LO ULTIMO
 
 export default app;
