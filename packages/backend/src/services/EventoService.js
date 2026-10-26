@@ -1,3 +1,6 @@
+import { BadRequestError } from "../errors/BadRequestError.js";
+import { Evento, TipoEntrada } from "../models/index.js";
+
 export class EventoService {
   constructor({ eventoRepository, categoriaRepository }) {
     this.eventoRepository = eventoRepository;
@@ -10,6 +13,30 @@ export class EventoService {
       nombre: c.nombre,
       descripcion: c.descripcion,
     }));
+  }
+
+  crearEvento(datos) {
+    const categoria = this.#resolverCategoria(datos.categoriaId);
+    const evento = new Evento({
+      nombre: datos.nombre.trim(),
+      descripcion: datos.descripcion.trim(),
+      categoria,
+      fecha: datos.fecha,
+      multimedia: datos.multimedia ?? [],
+      organizador: {
+        id: datos.organizadorId,
+        nombre: "",
+        apellido: "",
+      },
+      tiposEntrada: datos.tiposEntrada.map((tipo) => new TipoEntrada({
+        nombre: tipo.nombre.trim(),
+        descripcion: tipo.descripcion?.trim() ?? "",
+        precio: tipo.precio,
+        cupo: tipo.cupo,
+      })),
+    });
+
+    return this.eventoRepository.agregar(evento);
   }
 
   buscarEventos({ texto, categoria } = {}) {
@@ -45,7 +72,7 @@ export class EventoService {
     const categorias = this.categoriaRepository.obtenerTodas();
     const encontrada = categorias.find((c) => c.id === String(id).trim().toLowerCase());
     if (!encontrada) {
-      throw new CategoriaInexistenteError(id, categorias.map((c) => c.id));
+      throw new BadRequestError(`La categoría '${id}' no existe`);
     }
     return encontrada;
   }

@@ -8,11 +8,16 @@ import { EventoService } from "../services/EventoService.js";
 import { CompraRepository } from "../repositories/CompraRepository.js";
 import { EventoRepository } from "../repositories/EventoRepository.js";
 import { CategoriaRepository } from "../repositories/CategoriaRepository.js";
+import { validarSchema } from "../middlewares/validarSchema.js";
+import { crearEventoSchema } from "../schemas/eventoSchema.js";
 
-const compraService = new CompraService({ CompraRepository });
+const compraRepository = new CompraRepository();
+const compraService = new CompraService({ compraRepository });
 const compraController = new CompraController({ compraService });
 
-const eventoService = new EventoService({ EventoRepository, CategoriaRepository });
+const eventoRepository = new EventoRepository();
+const categoriaRepository = new CategoriaRepository();
+const eventoService = new EventoService({ eventoRepository, categoriaRepository });
 const eventoController = new EventoController({ eventoService });
 
 const router = express.Router();
@@ -60,6 +65,44 @@ const router = express.Router();
  *         description: La categoría indicada no existe
  */
 router.route("/").get((req, res, next) => eventoController.buscarEventos(req, res));
+
+/**
+ * @swagger
+ * /api/eventos:
+ *   post:
+ *     summary: Crear un evento con sus tipos de entrada (Organizador)
+ *     description: Crea un evento y sus tipos de entrada en una sola operación.
+ *     tags: [Eventos]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [nombre, descripcion, categoriaId, fecha, organizadorId, tiposEntrada]
+ *             properties:
+ *               nombre: { type: string, example: Festival de Primavera }
+ *               descripcion: { type: string, example: Música en vivo al aire libre }
+ *               categoriaId: { type: string, description: ID de /api/eventos/categorias }
+ *               fecha: { type: string, format: date-time, example: '2027-03-12T20:00:00.000Z' }
+ *               organizadorId: { type: string, example: usuario-2 }
+ *               multimedia: { type: array, items: { type: string } }
+ *               tiposEntrada:
+ *                 type: array
+ *                 minItems: 1
+ *                 items:
+ *                   type: object
+ *                   required: [nombre, precio, cupo]
+ *                   properties:
+ *                     nombre: { type: string, example: General }
+ *                     descripcion: { type: string, example: Acceso general }
+ *                     precio: { type: number, minimum: 0, example: 15000 }
+ *                     cupo: { type: integer, minimum: 1, example: 200 }
+ *     responses:
+ *       201: { description: Evento creado }
+ *       400: { description: Datos inválidos o categoría inexistente }
+ */
+router.route("/").post(validarSchema(crearEventoSchema), (req, res, next) => eventoController.crearEvento(req, res, next));
 
 /**
  * @swagger

@@ -29,4 +29,28 @@ export class EventoController {
       next(error);
     }
   }
+
+  crearEvento(req, res, next) {
+    try {
+      const evento = this.eventoService.crearEvento(req.body);
+      return res.status(201).json({ evento: serializarEventoCreado(evento) });
+    } catch (error) {
+      next(error);
+    }
+  }
+}
+
+function serializarEventoCreado(evento) {
+  return {
+    id: evento.id,
+    nombre: evento.nombre,
+    descripcion: evento.descripcion,
+    categoria: { id: evento.categoria.id, nombre: evento.categoria.nombre },
+    fecha: evento.fecha,
+    multimedia: evento.multimedia,
+    organizadorId: evento.organizador.id,
+    tiposEntrada: evento.tiposEntrada.map(({ nombre, descripcion, precio, cupo }) => ({
+      nombre, descripcion, precio, cupo,
+    })),
+  };
 }

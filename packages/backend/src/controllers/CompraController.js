@@ -35,5 +35,22 @@ export class CompraController {
       return next(error);
     }
   }
+
+  enviarMensaje(req, res, next) {
+    try {
+      const { usuarioId, compraId } = req.params;
+      const { mensaje } = req.body;
+      const resultado = this.compraService.enviarMensaje(compraId, usuarioId, mensaje);
+      return res.status(201).json({
+        mensaje: {
+          usuarioId: resultado.usuario.id,
+          mensaje: resultado.mensaje,
+          enviado: resultado.enviado,
+        },
+      });
+    } catch (error) {
+      return next(error);
+    }
+  }
 }
 
