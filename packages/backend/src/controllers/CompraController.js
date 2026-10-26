@@ -1,4 +1,4 @@
-import { CompraService } from "../services/CompraService";
+import { CompraService } from "../services/CompraService.js";
 
 /**
  * Controller de compras.
@@ -11,11 +11,21 @@ export class CompraController {
     this.compraService = compraService;
   }
 
-
   obtenerComprasDeUsuario(req, res) {
     const { usuarioId } = req.params;
     const resultado = this.compraService.obtenerComprasDeUsuario(usuarioId);
 
-    res.json(resultado);
+    return res.status(200).json(resultado);
+  }
+
+  obtenerComprasDeEvento(req, res) {
+    try {
+      const { eventoId } = req.params;
+      const resultado = this.compraService.obtenerComprasDeEvento(eventoId);
+
+      return res.satus(200).json(resultado);
+    } catch (error) {
+      res.status(404).json({ error: error.message });
+    }
   }
 }

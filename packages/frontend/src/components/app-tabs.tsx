@@ -19,6 +19,11 @@ export default function AppTabs() {
           renderingMode="template"
         />
       </NativeTabs.Trigger>
+      
+      <NativeTabs.Trigger name="compras">
+        <NativeTabs.Trigger.Label>Mis compras</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="ticket" md="confirmation_number" />
+      </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="explore">
         <NativeTabs.Trigger.Label>Explore</NativeTabs.Trigger.Label>

@@ -34,4 +34,13 @@ export class CompraRepository {
   obtenerPorComprador(usuarioId) {
     return this.compras.filter((c) => c.comprador?.id === usuarioId);
   }
+
+  obtenerPorEvento(eventoId) {
+    return this.compras.filter((c) => c.evento?.id === eventoId);
+  }
+
+  obtenerEventoPorId(eventoId) {
+    const compra = this.compras.find((c) => c.evento?.id === eventoId);
+    return compra ? compra.evento : null;
+  }
 }

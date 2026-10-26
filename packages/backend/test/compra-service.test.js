@@ -75,4 +75,46 @@ describe("CompraService", () => {
 
     assert.deepEqual(resultado, { usuarioId: "usuario-desconocido", compras: [] });
   });
+
+  it("devuelve las compras asociadas a un evento con sus estados y cupos disponibles", () => {
+    const tipoGeneral = new TipoEntrada({
+      nombre: "General",
+      descripcion: "General",
+      precio: 1000,
+      cupo: 8,
+    });
+    const evento = new Evento({
+      id: "evento-123",
+      nombre: "Concierto",
+      descripcion: "Concierto rock",
+      fecha: new Date(2026, 2, 20),
+      tiposEntrada: [tipoGeneral],
+    });
+
+    const compra = new Compra({
+      comprador: { id: "usuario-1", nombre: "Ana", apellido: "Gomez" },
+      evento,
+      tipoEntrada: tipoGeneral,
+      cantidad: 2,
+      estado: EstadoCompra.CONFIRMADA,
+    });
+
+    const service = crearService([compra]);
+
+    const resultado = service.obtenerComprasDeEvento("evento-123");
+
+    assert.equal(resultado.evento.id, "evento-123");
+    assert.equal(resultado.evento.tiposEntrada[0].cupoDisponible, 8);
+    assert.equal(resultado.compras.length, 1);
+    assert.equal(resultado.compras[0].estado, EstadoCompra.CONFIRMADA);
+    assert.equal(resultado.compras[0].comprador.nombre, "Ana");
+  });
+
+  it("lanza error si se consultan compras de un evento inexistente", () => {
+    const service = crearService([]);
+
+    assert.throws(() => {
+      service.obtenerComprasDeEvento("evento-fantasma");
+    }, /Evento no encontrado/);
+  });
 });

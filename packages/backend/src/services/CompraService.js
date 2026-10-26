@@ -1,4 +1,4 @@
-import { serializarCompras } from "../serializers/compras.js";
+import { serializarCompras, serializarComprasDeEvento } from "../serializers/compras.js";
 
 /**
  * Service de compras.
@@ -19,5 +19,15 @@ export class CompraService {
       usuarioId,
       compras: serializarCompras(compras, this.hoy ?? new Date()),
     };
+  }
+
+  obtenerComprasDeEvento(eventoId) {
+    const evento = this.compraRepository.obtenerEventoPorId(eventoId);
+    if (!evento) {
+      throw new Error(`Evento no encontrado: ${eventoId}`);
+    }
+    const compras = this.compraRepository.obtenerPorEvento(eventoId);
+
+    return serializarComprasDeEvento(evento, compras, this.hoy ?? new Date());
   }
 }
