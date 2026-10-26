@@ -3,6 +3,7 @@ import { Mensaje } from "../models/Mensaje.js";
 import { NotFoundError } from "../errors/NotFoundError.js";
 import { ConflictError } from "../errors/ConflictError.js";
 import { EstadoCompra } from "../models/EstadoCompra.js";
+import { Resenia } from "../models/Resenia.js";
 
 /**
  * Service de compras.
@@ -74,5 +75,24 @@ export class CompraService {
 
     compra.actualizarEstado(EstadoCompra.CANCELADA);
     return compra;
+  }
+
+  calificarEvento(compraId, usuarioId, puntuacion, detalle) {
+    const compra = this.compraRepository.obtenerPorId(compraId);
+    if (!compra) throw new NotFoundError(`Compra no encontrada: ${compraId}`);
+    if (compra.comprador?.id !== usuarioId) {
+      throw new ConflictError("Solo el comprador puede calificar esta compra");
+    }
+    if (compra.estado !== EstadoCompra.UTILIZADA) {
+      throw new ConflictError("Solo se puede calificar una entrada utilizada");
+    }
+    const resenia = new Resenia({
+      comprador: compra.comprador,
+      evento: compra.evento,
+      puntuacion,
+      detalle,
+    });
+    compra.evento.agregarResenia(resenia);
+    return resenia;
   }
 }

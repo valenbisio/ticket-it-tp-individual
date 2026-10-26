@@ -9,6 +9,7 @@ export class Evento {
     tiposEntrada = [], // TipoEntrada[]
     multimedia = [], // String[]
     organizador, // Usuario
+    resenias = [], // Resenia[]
   }) {
     this.id = crypto.randomUUID();
     this.nombre = nombre;
@@ -18,11 +19,17 @@ export class Evento {
     this.tiposEntrada = tiposEntrada;
     this.multimedia = multimedia;
     this.organizador = organizador;
+    this.resenias = resenias;
   }
 
   tuPrecioEstaEntre(min, max) {
     return this.tiposEntrada.some(
       (tipo) => tipo.precio >= min && tipo.precio <= max
     );
+  }
+
+  agregarResenia(resenia) {
+    this.resenias.push(resenia);
+    return resenia;
   }
 }

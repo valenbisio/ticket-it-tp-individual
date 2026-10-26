@@ -4,6 +4,7 @@ import { compraRepository } from "../data/seed.js";
 import { CompraService } from "../services/CompraService.js";
 import { validarSchema } from "../middlewares/validarSchema.js";
 import { enviarMensajeSchema } from "../schemas/mensajeSchema.js";
+import { crearReseniaSchema } from "../schemas/reseniaSchema.js";
 
 const compraService = new CompraService({ compraRepository });
 const compraController = new CompraController({ compraService });
@@ -106,5 +107,39 @@ router
 router
   .route("/:usuarioId/compras/:compraId")
   .patch((req, res, next) => compraController.cancelarCompra(req, res, next));
+
+/**
+ * @swagger
+ * /api/usuarios/{usuarioId}/compras/{compraId}/resenias:
+ *   post:
+ *     summary: Calificar un evento luego de utilizar la entrada
+ *     tags: [Compras]
+ *     parameters:
+ *       - in: path
+ *         name: usuarioId
+ *         required: true
+ *         schema: { type: string }
+ *       - in: path
+ *         name: compraId
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [puntuacion, detalle]
+ *             properties:
+ *               puntuacion: { type: integer, minimum: 1, maximum: 5, example: 5 }
+ *               detalle: { type: string, example: Excelente evento }
+ *     responses:
+ *       201: { description: Reseña creada }
+ *       404: { description: Compra no encontrada }
+ *       409: { description: La entrada aún no fue utilizada }
+ */
+router
+  .route("/:usuarioId/compras/:compraId/resenias")
+  .post(validarSchema(crearReseniaSchema), (req, res, next) => compraController.calificarEvento(req, res, next));
 
 export default router;

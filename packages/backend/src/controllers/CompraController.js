@@ -65,5 +65,26 @@ export class CompraController {
       return next(error);
     }
   }
+
+  calificarEvento(req, res, next) {
+    try {
+      const resenia = this.compraService.calificarEvento(
+        req.params.compraId,
+        req.params.usuarioId,
+        req.body.puntuacion,
+        req.body.detalle,
+      );
+      return res.status(201).json({
+        resenia: {
+          eventoId: resenia.evento.id,
+          usuarioId: resenia.comprador.id,
+          puntuacion: resenia.puntuacion,
+          detalle: resenia.detalle,
+        },
+      });
+    } catch (error) {
+      return next(error);
+    }
+  }
 }
 
