@@ -19,8 +19,8 @@ export class CompraService {
     this.hoy = hoy;
   }
 
-  obtenerComprasDeUsuario(usuarioId) {
-    const compras = this.compraRepository.obtenerPorComprador(usuarioId);
+  async obtenerComprasDeUsuario(usuarioId) {
+    const compras = await this.compraRepository.obtenerPorComprador(usuarioId);
 
     return {
       usuarioId,
@@ -28,18 +28,19 @@ export class CompraService {
     };
   }
 
-  obtenerComprasDeEvento(eventoId) {
-    const evento = this.compraRepository.obtenerEventoPorId(eventoId);
+  async obtenerComprasDeEvento(eventoId) {
+    const evento = await (this.eventoRepository?.obtenerPorId(eventoId)
+      ?? this.compraRepository.obtenerEventoPorId(eventoId));
     if (!evento) {
       throw new Error(`Evento no encontrado: ${eventoId}`);
     }
-    const compras = this.compraRepository.obtenerPorEvento(eventoId);
+    const compras = await this.compraRepository.obtenerPorEvento(eventoId);
 
     return serializarComprasDeEvento(evento, compras, this.hoy ?? new Date());
   }
 
-  realizarCompra(eventoId, compradorId, tipoEntradaNombre, cantidad) {
-    const evento = this.eventoRepository.obtenerPorId(eventoId);
+  async realizarCompra(eventoId, compradorId, tipoEntradaNombre, cantidad) {
+    const evento = await this.eventoRepository.obtenerPorId(eventoId);
     if (!evento) throw new NotFoundError(`Evento no encontrado: ${eventoId}`);
     const tipoEntrada = evento.tiposEntrada.find(
       (tipo) => tipo.nombre.toLowerCase() === tipoEntradaNombre.toLowerCase(),
@@ -56,11 +57,11 @@ export class CompraService {
       tipoEntrada,
       cantidad,
     });
-    return this.compraRepository.agregar(compra);
+    return await this.compraRepository.agregar(compra);
   }
 
-  enviarMensaje(compraId, usuarioId, texto) {
-    const compra = this.compraRepository.obtenerPorId(compraId);
+  async enviarMensaje(compraId, usuarioId, texto) {
+    const compra = await this.compraRepository.obtenerPorId(compraId);
     if (!compra) {
       throw new NotFoundError(`Compra no encontrada: ${compraId}`);
     }
@@ -78,8 +79,8 @@ export class CompraService {
     return mensaje;
   }
 
-  cancelarCompra(compraId, usuarioId) {
-    const compra = this.compraRepository.obtenerPorId(compraId);
+  async cancelarCompra(compraId, usuarioId) {
+    const compra = await this.compraRepository.obtenerPorId(compraId);
     if (!compra) {
       throw new NotFoundError(`Compra no encontrada: ${compraId}`);
     }
@@ -100,8 +101,8 @@ export class CompraService {
     return compra;
   }
 
-  calificarEvento(compraId, usuarioId, puntuacion, detalle) {
-    const compra = this.compraRepository.obtenerPorId(compraId);
+  async calificarEvento(compraId, usuarioId, puntuacion, detalle) {
+    const compra = await this.compraRepository.obtenerPorId(compraId);
     if (!compra) throw new NotFoundError(`Compra no encontrada: ${compraId}`);
     if (compra.comprador?.id !== usuarioId) {
       throw new ConflictError("Solo el comprador puede calificar esta compra");

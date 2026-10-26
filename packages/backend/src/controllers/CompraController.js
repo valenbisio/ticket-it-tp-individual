@@ -13,11 +13,11 @@ export class CompraController {
     this.compraService = compraService;
   }
 
-  obtenerComprasDeUsuario(req, res, next) {
+  async obtenerComprasDeUsuario(req, res, next) {
     try {
       const { usuarioId } = req.params;
       const resultado =
-        this.compraService.obtenerComprasDeUsuario(usuarioId);
+        await this.compraService.obtenerComprasDeUsuario(usuarioId);
 
       return res.status(200).json(resultado);
     } catch (error) {
@@ -25,11 +25,11 @@ export class CompraController {
     }
   }
 
-  obtenerComprasDeEvento(req, res, next) {
+  async obtenerComprasDeEvento(req, res, next) {
     try {
       const { eventoId } = req.params;
       const resultado =
-        this.compraService.obtenerComprasDeEvento(eventoId);
+        await this.compraService.obtenerComprasDeEvento(eventoId);
 
       return res.status(200).json(resultado);
     } catch (error) {
@@ -37,11 +37,11 @@ export class CompraController {
     }
   }
 
-  enviarMensaje(req, res, next) {
+  async enviarMensaje(req, res, next) {
     try {
       const { usuarioId, compraId } = req.params;
       const { mensaje } = req.body;
-      const resultado = this.compraService.enviarMensaje(compraId, usuarioId, mensaje);
+      const resultado = await this.compraService.enviarMensaje(compraId, usuarioId, mensaje);
       return res.status(201).json({
         mensaje: {
           usuarioId: resultado.usuario.id,
@@ -54,9 +54,9 @@ export class CompraController {
     }
   }
 
-  cancelarCompra(req, res, next) {
+  async cancelarCompra(req, res, next) {
     try {
-      const compra = this.compraService.cancelarCompra(
+      const compra = await this.compraService.cancelarCompra(
         req.params.compraId,
         req.params.usuarioId,
       );
@@ -66,9 +66,9 @@ export class CompraController {
     }
   }
 
-  calificarEvento(req, res, next) {
+  async calificarEvento(req, res, next) {
     try {
-      const resenia = this.compraService.calificarEvento(
+      const resenia = await this.compraService.calificarEvento(
         req.params.compraId,
         req.params.usuarioId,
         req.body.puntuacion,
@@ -87,9 +87,9 @@ export class CompraController {
     }
   }
 
-  realizarCompra(req, res, next) {
+  async realizarCompra(req, res, next) {
     try {
-      const compra = this.compraService.realizarCompra(
+      const compra = await this.compraService.realizarCompra(
         req.params.eventoId,
         req.body.compradorId,
         req.body.tipoEntrada,

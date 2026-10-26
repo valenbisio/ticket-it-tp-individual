@@ -13,6 +13,18 @@ export const validarSchema = (schema)=>{
     };
 };
 
+export const validarQuerySchema = (schema) => {
+    return (req, res, next) => {
+        const resultado = schema.safeParse(req.query);
+        if (resultado.error) {
+            const detalles = resultado.error.issues.map((i) => i.message).join(", ");
+            return next(new BadRequestError(`Parámetros inválidos: ${detalles}`));
+        }
+        req.query = resultado.data;
+        next();
+    };
+};
+
 
 
 

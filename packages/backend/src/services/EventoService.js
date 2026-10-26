@@ -8,15 +8,16 @@ export class EventoService {
     this.categoriaRepository = categoriaRepository;
   }
 
-  obtenerCategorias() {
-    return this.categoriaRepository.obtenerTodas().map((c) => ({
+  async obtenerCategorias() {
+    const categorias = await this.categoriaRepository.obtenerTodas();
+    return categorias.map((c) => ({
       id: c.id,
       nombre: c.nombre,
       descripcion: c.descripcion,
     }));
   }
 
-  crearEvento(datos) {
+  async crearEvento(datos) {
     const categoria = this.#resolverCategoria(datos.categoriaId);
     const evento = new Evento({
       nombre: datos.nombre.trim(),
@@ -37,15 +38,14 @@ export class EventoService {
       })),
     });
 
-    return this.eventoRepository.agregar(evento);
+    return await this.eventoRepository.agregar(evento);
   }
 
-  buscarEventos({ texto, categoria, ordenarPor, orden = "asc" } = {}) {
+  async buscarEventos({ texto, categoria, ordenarPor, orden = "asc" } = {}) {
     const categoriaBuscada = this.#resolverCategoria(categoria);
     const palabras = texto ? normalizar(texto).split(/\s+/).filter(Boolean) : [];
 
-    const eventos = this.eventoRepository
-      .obtenerTodos()
+    const eventos = (await this.eventoRepository.obtenerTodos())
       .filter((evento) => {
         if (categoriaBuscada && evento.categoria.id !== categoriaBuscada.id) {
           return false;
@@ -69,8 +69,8 @@ export class EventoService {
     return this.#ordenarEventos(eventos, ordenarPor, orden);
   }
 
-  obtenerResenias(eventoId) {
-    const evento = this.eventoRepository.obtenerPorId(eventoId);
+  async obtenerResenias(eventoId) {
+    const evento = await this.eventoRepository.obtenerPorId(eventoId);
     if (!evento) {
       throw new NotFoundError(`Evento no encontrado: ${eventoId}`);
     }
@@ -126,10 +126,6 @@ export class EventoService {
       fecha: "fecha",
       puntajeOrganizador: "puntajeOrganizador",
     };
-    if (!campos[ordenarPor] || !["asc", "desc"].includes(orden)) {
-      throw new BadRequestError("ordenarPor debe ser precio, fecha o puntajeOrganizador y orden asc o desc");
-    }
-
     const campo = campos[ordenarPor];
     const factor = orden === "desc" ? -1 : 1;
     return eventos.sort((a, b) => {

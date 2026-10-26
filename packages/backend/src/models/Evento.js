@@ -2,6 +2,7 @@ import crypto from "crypto";
 
 export class Evento {
   constructor({
+    id = crypto.randomUUID(),
     nombre,
     descripcion,
     categoria, // Categoria
@@ -11,7 +12,7 @@ export class Evento {
     organizador, // Usuario
     resenias = [], // Resenia[]
   }) {
-    this.id = crypto.randomUUID();
+    this.id = id;
     this.nombre = nombre;
     this.descripcion = descripcion;
     this.categoria = categoria;

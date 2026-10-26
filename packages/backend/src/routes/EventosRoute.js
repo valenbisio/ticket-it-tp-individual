@@ -8,9 +8,10 @@ import { EventoService } from "../services/EventoService.js";
 import { CompraRepository } from "../repositories/CompraRepository.js";
 import { EventoRepository } from "../repositories/EventoRepository.js";
 import { CategoriaRepository } from "../repositories/CategoriaRepository.js";
-import { validarSchema } from "../middlewares/validarSchema.js";
+import { validarQuerySchema, validarSchema } from "../middlewares/validarSchema.js";
 import { crearEventoSchema } from "../schemas/eventoSchema.js";
 import { crearCompraSchema } from "../schemas/compraSchema.js";
+import { busquedaEventoSchema } from "../schemas/busquedaEventoSchema.js";
 
 const compraRepository = new CompraRepository();
 const eventoRepository = new EventoRepository();
@@ -77,7 +78,7 @@ const router = express.Router();
  *       400:
  *         description: La categoría indicada no existe
  */
-router.route("/").get((req, res, next) => eventoController.buscarEventos(req, res));
+router.route("/").get(validarQuerySchema(busquedaEventoSchema), (req, res, next) => eventoController.buscarEventos(req, res, next));
 
 /**
  * @swagger

@@ -38,26 +38,26 @@ function crearService(compras) {
 }
 
 describe("CompraService", () => {
-  it("devuelve solo las compras del comprador indicado", () => {
+  it("devuelve solo las compras del comprador indicado", async () => {
     const service = crearService([
       crearCompra({ compradorId: "usuario-1", estado: EstadoCompra.PENDIENTE, fechaEvento: new Date(2026, 2, 20) }),
       crearCompra({ compradorId: "usuario-1", estado: EstadoCompra.CONFIRMADA, fechaEvento: new Date(2026, 2, 20) }),
       crearCompra({ compradorId: "usuario-2", estado: EstadoCompra.CONFIRMADA, fechaEvento: new Date(2026, 2, 25) }),
     ]);
 
-    const resultado = service.obtenerComprasDeUsuario("usuario-1");
+    const resultado = await service.obtenerComprasDeUsuario("usuario-1");
 
     assert.equal(resultado.usuarioId, "usuario-1");
     assert.equal(resultado.compras.length, 2);
   });
 
-  it("incluye los días restantes solo para compras confirmadas", () => {
+  it("incluye los días restantes solo para compras confirmadas", async () => {
     const service = crearService([
       crearCompra({ estado: EstadoCompra.CONFIRMADA, fechaEvento: new Date(2026, 2, 20, 21, 0), cantidad: 2 }),
       crearCompra({ estado: EstadoCompra.PENDIENTE, fechaEvento: new Date(2026, 2, 20, 21, 0) }),
     ]);
 
-    const { compras } = service.obtenerComprasDeUsuario("usuario-1");
+    const { compras } = await service.obtenerComprasDeUsuario("usuario-1");
     const [confirmada, pendiente] = compras;
 
     assert.equal(confirmada.estado, EstadoCompra.CONFIRMADA);
@@ -68,15 +68,15 @@ describe("CompraService", () => {
     assert.equal(pendiente.diasRestantesParaEvento, null);
   });
 
-  it("devuelve una lista vacía para un comprador sin compras", () => {
+  it("devuelve una lista vacía para un comprador sin compras", async () => {
     const service = crearService([]);
 
-    const resultado = service.obtenerComprasDeUsuario("usuario-desconocido");
+    const resultado = await service.obtenerComprasDeUsuario("usuario-desconocido");
 
     assert.deepEqual(resultado, { usuarioId: "usuario-desconocido", compras: [] });
   });
 
-  it("devuelve las compras asociadas a un evento con sus estados y cupos disponibles", () => {
+  it("devuelve las compras asociadas a un evento con sus estados y cupos disponibles", async () => {
     const tipoGeneral = new TipoEntrada({
       nombre: "General",
       descripcion: "General",
@@ -101,7 +101,7 @@ describe("CompraService", () => {
 
     const service = crearService([compra]);
 
-    const resultado = service.obtenerComprasDeEvento("evento-123");
+    const resultado = await service.obtenerComprasDeEvento("evento-123");
 
     assert.equal(resultado.evento.id, "evento-123");
     assert.equal(resultado.evento.tiposEntrada[0].cupoDisponible, 8);
@@ -110,11 +110,12 @@ describe("CompraService", () => {
     assert.equal(resultado.compras[0].comprador.nombre, "Ana");
   });
 
-  it("lanza error si se consultan compras de un evento inexistente", () => {
+  it("lanza error si se consultan compras de un evento inexistente", async () => {
     const service = crearService([]);
 
-    assert.throws(() => {
-      service.obtenerComprasDeEvento("evento-fantasma");
-    }, /Evento no encontrado/);
+    await assert.rejects(
+      service.obtenerComprasDeEvento("evento-fantasma"),
+      /Evento no encontrado/,
+    );
   });
 });

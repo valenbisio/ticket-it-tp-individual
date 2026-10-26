@@ -5,11 +5,11 @@ export class EventoController {
     this.eventoService = eventoService;
   }
 
-  buscarEventos(req, res, next) {
+  async buscarEventos(req, res, next) {
     const { q, categoria, ordenarPor, orden } = req.query;
 
     try {
-      const eventos = this.eventoService.buscarEventos({
+      const eventos = await this.eventoService.buscarEventos({
         texto: q,
         categoria,
         ordenarPor,
@@ -22,30 +22,30 @@ export class EventoController {
     }
   }
 
-  obtenerCategorias(req, res, next) {
+  async obtenerCategorias(req, res, next) {
     try {
       return res.json({
-        categorias: this.eventoService.obtenerCategorias(),
+        categorias: await this.eventoService.obtenerCategorias(),
       });
     } catch (error) {
       next(error);
     }
   }
 
-  crearEvento(req, res, next) {
+  async crearEvento(req, res, next) {
     try {
-      const evento = this.eventoService.crearEvento(req.body);
+      const evento = await this.eventoService.crearEvento(req.body);
       return res.status(201).json({ evento: serializarEventoCreado(evento) });
     } catch (error) {
       next(error);
     }
   }
 
-  obtenerResenias(req, res, next) {
+  async obtenerResenias(req, res, next) {
     try {
       return res.status(200).json({
         eventoId: req.params.eventoId,
-        resenias: this.eventoService.obtenerResenias(req.params.eventoId),
+        resenias: await this.eventoService.obtenerResenias(req.params.eventoId),
       });
     } catch (error) {
       next(error);
