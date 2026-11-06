@@ -104,7 +104,7 @@ describe("CompraService", () => {
     const resultado = await service.obtenerComprasDeEvento("evento-123");
 
     assert.equal(resultado.evento.id, "evento-123");
-    assert.equal(resultado.evento.tiposEntrada[0].cupoDisponible, 8);
+    assert.equal(resultado.evento.tiposEntrada[0].cupoDisponible, 6);
     assert.equal(resultado.compras.length, 1);
     assert.equal(resultado.compras[0].estado, EstadoCompra.CONFIRMADA);
     assert.equal(resultado.compras[0].comprador.nombre, "Ana");

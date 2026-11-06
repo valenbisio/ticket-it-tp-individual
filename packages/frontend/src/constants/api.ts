@@ -4,9 +4,3 @@
  * cuando se prueba la app en un dispositivo físico).
  */
 export const ApiUrl = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8000';
-
-/**
- * Comprador de ejemplo: la aplicación todavía no tiene autenticación, así que
- * se usa el mismo usuario que crea el seed del backend.
- */
-export const CompradorDemoId = 'usuario-1';

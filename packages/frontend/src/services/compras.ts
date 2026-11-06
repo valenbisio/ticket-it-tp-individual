@@ -1,4 +1,5 @@
 import { ApiUrl } from '@/constants/api';
+import { expirarSesion, obtenerTokenGuardado } from '@/contexts/auth-context';
 import type { EstadoCompra } from '@/constants/compra-estado';
 
 /** Compra tal como la devuelve el backend en `GET /api/usuarios/:usuarioId/compras`. */
@@ -33,10 +34,13 @@ type RespuestaCompras = {
 
 /** Obtiene las compras del comprador indicado. */
 export async function obtenerComprasDeUsuario(usuarioId: string): Promise<CompraSerializada[]> {
+  const token = await obtenerTokenGuardado();
   const respuesta = await fetch(
     `${ApiUrl}/api/usuarios/${encodeURIComponent(usuarioId)}/compras`,
+    { headers: token ? { Authorization: `Bearer ${token}` } : {} },
   );
 
+  if (respuesta.status === 401) await expirarSesion();
   if (!respuesta.ok) {
     throw new Error(`No se pudieron obtener las compras (HTTP ${respuesta.status})`);
   }

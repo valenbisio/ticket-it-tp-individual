@@ -12,14 +12,20 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CompraCard } from '@/components/compra-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { CompradorDemoId } from '@/constants/api';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { obtenerComprasDeUsuario, type CompraSerializada } from '@/services/compras';
+import { useAuth } from '@/contexts/auth-context';
+import { Redirect, type Href } from 'expo-router';
 
 export default function ComprasScreen() {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
+  const { estado } = useAuth();
+
+  if (estado && estado !== 'cargando' && estado.usuario.rol !== 'comprador') {
+    return <Redirect href={'/' as Href} />;
+  }
 
   const [compras, setCompras] = useState<CompraSerializada[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -29,7 +35,8 @@ export default function ComprasScreen() {
   const cargarCompras = useCallback(async () => {
     try {
       setError(null);
-      const datos = await obtenerComprasDeUsuario(CompradorDemoId);
+      if (!estado || estado === 'cargando') return;
+      const datos = await obtenerComprasDeUsuario(estado.usuario.id);
       setCompras(datos);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Ocurrió un error inesperado');
@@ -37,7 +44,7 @@ export default function ComprasScreen() {
       setCargando(false);
       setRefrescando(false);
     }
-  }, []);
+  }, [estado]);
 
   useEffect(() => {
     void cargarCompras();

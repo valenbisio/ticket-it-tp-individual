@@ -8,6 +8,9 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { WebBadge } from '@/components/web-badge';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { Pressable } from 'react-native';
+import { useAuth } from '@/contexts/auth-context';
+import { useRouter, type Href } from 'expo-router';
 
 function getDevMenuHint() {
   if (Platform.OS === 'web') {
@@ -29,19 +32,22 @@ function getDevMenuHint() {
 }
 
 export default function HomeScreen() {
+  const { estado, cerrarSesion } = useAuth();
+  const router = useRouter();
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <ThemedView style={styles.heroSection}>
           <AnimatedIcon />
           <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Mondongo
+            {estado && estado !== 'cargando' ? `Hola, ${estado.usuario.nombre}` : 'Ticket It'}
           </ThemedText>
         </ThemedView>
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
+        <ThemedText type="subtitle">{estado && estado !== 'cargando' && estado.usuario.rol === 'organizador' ? 'Panel de organizador' : 'Encontrá tu próximo evento'}</ThemedText>
+        <Pressable onPress={() => void cerrarSesion().then(() => router.replace('/login' as Href))}>
+          <ThemedText type="link">Cerrar sesión</ThemedText>
+        </Pressable>
 
         <ThemedView type="backgroundElement" style={styles.stepContainer}>
           <HintRow

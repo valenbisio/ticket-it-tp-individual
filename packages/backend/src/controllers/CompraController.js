@@ -15,7 +15,7 @@ export class CompraController {
 
   async obtenerComprasDeUsuario(req, res, next) {
     try {
-      const { usuarioId } = req.params;
+      const usuarioId = req.usuario.id;
       const resultado =
         await this.compraService.obtenerComprasDeUsuario(usuarioId);
 
@@ -29,7 +29,7 @@ export class CompraController {
     try {
       const { eventoId } = req.params;
       const resultado =
-        await this.compraService.obtenerComprasDeEvento(eventoId);
+        await this.compraService.obtenerComprasDeEvento(eventoId, req.usuario?.id);
 
       return res.status(200).json(resultado);
     } catch (error) {
@@ -39,9 +39,9 @@ export class CompraController {
 
   async enviarMensaje(req, res, next) {
     try {
-      const { usuarioId, compraId } = req.params;
+      const { compraId } = req.params;
       const { mensaje } = req.body;
-      const resultado = await this.compraService.enviarMensaje(compraId, usuarioId, mensaje);
+      const resultado = await this.compraService.enviarMensaje(compraId, req.usuario.id, mensaje);
       return res.status(201).json({
         mensaje: {
           usuarioId: resultado.usuario.id,
@@ -54,11 +54,23 @@ export class CompraController {
     }
   }
 
+  async obtenerMensajes(req, res, next) {
+    try {
+      const mensajes = await this.compraService.obtenerMensajes(
+        req.params.compraId,
+        req.usuario.id,
+      );
+      return res.status(200).json({ compraId: req.params.compraId, mensajes });
+    } catch (error) {
+      return next(error);
+    }
+  }
+
   async cancelarCompra(req, res, next) {
     try {
       const compra = await this.compraService.cancelarCompra(
         req.params.compraId,
-        req.params.usuarioId,
+        req.usuario.id,
       );
       return res.status(200).json({ compra: serializarCompra(compra) });
     } catch (error) {
@@ -70,7 +82,7 @@ export class CompraController {
     try {
       const resenia = await this.compraService.calificarEvento(
         req.params.compraId,
-        req.params.usuarioId,
+        req.usuario.id,
         req.body.puntuacion,
         req.body.detalle,
       );
@@ -91,11 +103,11 @@ export class CompraController {
     try {
       const compra = await this.compraService.realizarCompra(
         req.params.eventoId,
-        req.body.compradorId,
+        req.usuario.id,
         req.body.tipoEntrada,
         req.body.cantidad,
       );
-      return res.status(201).json({ compra });
+      return res.status(201).json({ compra: serializarCompra(compra) });
     } catch (error) {
       return next(error);
     }

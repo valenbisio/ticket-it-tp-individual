@@ -16,7 +16,7 @@ export function errorHandler(err, req , res, next){
     }
 
     if (err instanceof AppError) {
-        const statusCode = err.statusCode || err.status || 500;
+        const statusCode = err.statusCode || (typeof err.status === "number" ? err.status : 500);
         return res.status(statusCode).json({
             status: err.status && typeof err.status === "string" ? err.status : (statusCode >= 500 ? "error" : "fail"),
             statusCode: statusCode,

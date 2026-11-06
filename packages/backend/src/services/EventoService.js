@@ -27,8 +27,8 @@ export class EventoService {
       multimedia: datos.multimedia ?? [],
       organizador: {
         id: datos.organizadorId,
-        nombre: "",
-        apellido: "",
+        nombre: datos.organizadorNombre ?? "",
+        apellido: datos.organizadorApellido ?? "",
       },
       tiposEntrada: datos.tiposEntrada.map((tipo) => new TipoEntrada({
         nombre: tipo.nombre.trim(),
@@ -45,7 +45,8 @@ export class EventoService {
     const categoriaBuscada = this.#resolverCategoria(categoria);
     const palabras = texto ? normalizar(texto).split(/\s+/).filter(Boolean) : [];
 
-    const eventos = (await this.eventoRepository.obtenerTodos())
+    const eventosDisponibles = await this.eventoRepository.obtenerTodas();
+    const eventos = eventosDisponibles
       .filter((evento) => {
         if (categoriaBuscada && evento.categoria.id !== categoriaBuscada.id) {
           return false;
@@ -64,7 +65,10 @@ export class EventoService {
         // Todas las palabras buscadas deben aparecer
         return palabras.every((palabra) => contenido.includes(palabra));
       })
-      .map((evento) => this.#serializar(evento));
+      .map((evento) => this.#serializar(
+        evento,
+        this.#calcularPuntajeOrganizador(evento.organizador.id, eventosDisponibles),
+      ));
 
     return this.#ordenarEventos(eventos, ordenarPor, orden);
   }
@@ -92,7 +96,7 @@ export class EventoService {
     return encontrada;
   }
 
-  #serializar(evento) {
+  #serializar(evento, puntajeOrganizador) {
     const precios = evento.tiposEntrada.map((t) => t.precio);
     return {
       id: evento.id,
@@ -103,7 +107,7 @@ export class EventoService {
       portada: evento.multimedia[0] ?? null,
       organizador: `${evento.organizador.nombre} ${evento.organizador.apellido}`,
       precioDesde: precios.length > 0 ? Math.min(...precios) : null,
-      puntajeOrganizador: this.#calcularPuntajeOrganizador(evento),
+      puntajeOrganizador,
       resenias: evento.resenias.map((resenia) => ({
         usuarioId: resenia.comprador?.id ?? null,
         puntuacion: resenia.puntuacion,
@@ -112,10 +116,13 @@ export class EventoService {
     };
   }
 
-  #calcularPuntajeOrganizador(evento) {
-    if (evento.resenias.length === 0) return null;
-    const suma = evento.resenias.reduce((total, resenia) => total + resenia.puntuacion, 0);
-    return suma / evento.resenias.length;
+  #calcularPuntajeOrganizador(organizadorId, eventos) {
+    const resenias = eventos
+      .filter((evento) => evento.organizador.id === organizadorId)
+      .flatMap((evento) => evento.resenias);
+    if (resenias.length === 0) return null;
+    const suma = resenias.reduce((total, resenia) => total + resenia.puntuacion, 0);
+    return suma / resenias.length;
   }
 
   #ordenarEventos(eventos, ordenarPor, orden = "asc") {

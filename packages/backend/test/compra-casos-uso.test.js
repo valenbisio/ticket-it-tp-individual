@@ -49,6 +49,10 @@ describe("nuevas operaciones de compras y eventos", () => {
     await service.enviarMensaje(compra.id, "comprador-1", "Consulta");
     await service.enviarMensaje(compra.id, "organizador-1", "Respuesta");
     assert.equal(compra.mensajes.length, 2);
+    const historial = await service.obtenerMensajes(compra.id, "comprador-1");
+    assert.equal(historial.length, 2);
+    assert.equal(historial[0].mensaje, "Consulta");
+    await assert.rejects(service.obtenerMensajes(compra.id, "otro-usuario"), /consultar mensajes/);
   });
 
   it("permite reseñar solo una entrada utilizada", async () => {

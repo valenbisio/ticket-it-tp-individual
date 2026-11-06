@@ -14,8 +14,10 @@ import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
 
 import { Colors, MaxContentWidth, Spacing } from '@/constants/theme';
+import { useAuth } from '@/contexts/auth-context';
 
 export default function AppTabs() {
+  const { estado } = useAuth();
   return (
     <Tabs>
       <TabSlot style={{ height: '100%' }} />
@@ -24,9 +26,10 @@ export default function AppTabs() {
           <TabTrigger name="home" href="/" asChild>
             <TabButton>Home</TabButton>
           </TabTrigger>
-          <TabTrigger name="explore" href="/explore" asChild>
-            <TabButton>Explore</TabButton>
-          </TabTrigger>
+          {estado && estado !== 'cargando' && estado.usuario.rol === 'comprador' && <>
+            <TabTrigger name="compras" href="/compras" asChild><TabButton>Mis compras</TabButton></TabTrigger>
+            <TabTrigger name="explore" href="/explore" asChild><TabButton>Eventos</TabButton></TabTrigger>
+          </>}
         </CustomTabList>
       </TabList>
     </Tabs>

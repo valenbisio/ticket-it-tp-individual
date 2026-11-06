@@ -5,17 +5,13 @@ import { EventoController } from "../controllers/EventoController.js";
 import { CompraService } from "../services/CompraService.js";
 import { EventoService } from "../services/EventoService.js";
 
-import { CompraRepository } from "../repositories/CompraRepository.js";
-import { EventoRepository } from "../repositories/EventoRepository.js";
-import { CategoriaRepository } from "../repositories/CategoriaRepository.js";
+import { compraRepository, eventoRepository, categoriaRepository } from "../data/seed.js";
 import { validarQuerySchema, validarSchema } from "../middlewares/validarSchema.js";
 import { crearEventoSchema } from "../schemas/eventoSchema.js";
 import { crearCompraSchema } from "../schemas/compraSchema.js";
 import { busquedaEventoSchema } from "../schemas/busquedaEventoSchema.js";
+import { autenticar, requerirRol } from "./AuthRoute.js";
 
-const compraRepository = new CompraRepository();
-const eventoRepository = new EventoRepository();
-const categoriaRepository = new CategoriaRepository();
 const compraService = new CompraService({ compraRepository, eventoRepository });
 const compraController = new CompraController({ compraService });
 const eventoService = new EventoService({ eventoRepository, categoriaRepository });
@@ -28,6 +24,7 @@ const router = express.Router();
  * /api/eventos:
  *   get:
  *     summary: Buscar eventos por texto o categoría (Comprador)
+ *     security: [{ bearerAuth: [] }]
  *     description: >
  *       Devuelve los eventos que coinciden con la búsqueda textual (nombre,
  *       descripción, categoría u organizador, sin distinguir mayúsculas ni
@@ -46,7 +43,7 @@ const router = express.Router();
  *         schema:
  *           type: string
  *         description: ID de la categoría (ver /api/eventos/categorias)
- *         example: recital
+ *         example: 550e8400-e29b-41d4-a716-446655440000
  *       - in: query
  *         name: ordenarPor
  *         schema:
@@ -78,13 +75,15 @@ const router = express.Router();
  *       400:
  *         description: La categoría indicada no existe
  */
-router.route("/").get(validarQuerySchema(busquedaEventoSchema), (req, res, next) => eventoController.buscarEventos(req, res, next));
+// Flujos 3 y 11: búsqueda, exploración y ordenamiento de eventos para compradores.
+router.route("/").get(autenticar, requerirRol("comprador"), validarQuerySchema(busquedaEventoSchema), (req, res, next) => eventoController.buscarEventos(req, res, next));
 
 /**
  * @swagger
  * /api/eventos:
  *   post:
  *     summary: Crear un evento con sus tipos de entrada (Organizador)
+ *     security: [{ bearerAuth: [] }]
  *     description: Crea un evento y sus tipos de entrada en una sola operación.
  *     tags: [Eventos]
  *     requestBody:
@@ -93,13 +92,12 @@ router.route("/").get(validarQuerySchema(busquedaEventoSchema), (req, res, next)
  *         application/json:
  *           schema:
  *             type: object
- *             required: [nombre, descripcion, categoriaId, fecha, organizadorId, tiposEntrada]
+ *             required: [nombre, descripcion, categoriaId, fecha, tiposEntrada]
  *             properties:
  *               nombre: { type: string, example: Festival de Primavera }
  *               descripcion: { type: string, example: Música en vivo al aire libre }
  *               categoriaId: { type: string, description: ID de /api/eventos/categorias }
  *               fecha: { type: string, format: date-time, example: '2027-03-12T20:00:00.000Z' }
- *               organizadorId: { type: string, example: usuario-2 }
  *               multimedia: { type: array, items: { type: string } }
  *               tiposEntrada:
  *                 type: array
@@ -116,13 +114,17 @@ router.route("/").get(validarQuerySchema(busquedaEventoSchema), (req, res, next)
  *       201: { description: Evento creado }
  *       400: { description: Datos inválidos o categoría inexistente }
  */
-router.route("/").post(validarSchema(crearEventoSchema), (req, res, next) => eventoController.crearEvento(req, res, next));
+// Flujo 4: creación de eventos por organizadores.
+router.route("/").post(autenticar, requerirRol("organizador"), validarSchema(crearEventoSchema), (req, res, next) => {
+  return eventoController.crearEvento(req, res, next);
+});
 
 /**
  * @swagger
  * /api/eventos/categorias:
  *   get:
  *     summary: Listar las categorías de eventos (Comprador)
+ *     security: [{ bearerAuth: [] }]
  *     description: Sirve para explorar los eventos por categoría.
  *     tags: [Eventos]
  *     responses:
@@ -132,22 +134,24 @@ router.route("/").post(validarSchema(crearEventoSchema), (req, res, next) => eve
  *           application/json:
  *             example:
  *               categorias:
- *                 - id: recital
+ *                 - id: 550e8400-e29b-41d4-a716-446655440000
  *                   nombre: Recital
  *                   descripcion: Shows de música en vivo
- *                 - id: teatro
+ *                 - id: 550e8400-e29b-41d4-a716-446655440001
  *                   nombre: Teatro
  *                   descripcion: Obras y espectáculos teatrales
  */
 router
   .route("/categorias")
-  .get((req, res, next) => eventoController.obtenerCategorias(req, res));
+  // Flujo 3: exploración del catálogo por categorías.
+  .get(autenticar, requerirRol("comprador"), (req, res, next) => eventoController.obtenerCategorias(req, res, next));
 
 /**
  * @swagger
  * /api/eventos/{eventoId}/compras:
  *   get:
  *     summary: Obtener compras asociadas a un evento (Organizador)
+ *     security: [{ bearerAuth: [] }]
  *     description: >
  *       Devuelve las compras asociadas a un evento en particular, diferenciando
  *       el estado de cada compra y mostrando cuántas entradas quedan disponibles
@@ -165,17 +169,44 @@ router
  *         description: Detalle del evento, cupos y compras asociadas
  *       404:
  *         description: Evento no encontrado
+ *   post:
+ *     summary: Comprar entradas para un evento (Comprador)
+ *     security: [{ bearerAuth: [] }]
+ *     tags: [Compras]
+ *     parameters:
+ *       - in: path
+ *         name: eventoId
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [tipoEntrada, cantidad]
+ *             properties:
+ *               tipoEntrada: { type: string, example: General }
+ *               cantidad: { type: integer, minimum: 1, example: 2 }
+ *     responses:
+ *       201: { description: Compra creada }
+ *       409: { description: Cupo insuficiente }
  */
 router
   .route("/:eventoId/compras")
-  .get((req, res, next) => compraController.obtenerComprasDeEvento(req, res))
-  .post(validarSchema(crearCompraSchema), (req, res, next) => compraController.realizarCompra(req, res, next));
+  // Flujo 2 (GET): organizador consulta compras y disponibilidad.
+  .get(autenticar, requerirRol("organizador"), (req, res, next) => compraController.obtenerComprasDeEvento(req, res, next))
+  // Flujo 12 (POST): comprador compra tipo y cantidad de entradas.
+  .post(autenticar, requerirRol("comprador"), validarSchema(crearCompraSchema), (req, res, next) => {
+    return compraController.realizarCompra(req, res, next);
+  });
 
 /**
  * @swagger
  * /api/eventos/{eventoId}/resenias:
  *   get:
  *     summary: Obtener reseñas de un evento
+ *     security: [{ bearerAuth: [] }]
  *     description: Devuelve las experiencias de compradores que utilizaron sus entradas.
  *     tags: [Eventos]
  *     parameters:
@@ -189,6 +220,7 @@ router
  */
 router
   .route("/:eventoId/resenias")
-  .get((req, res, next) => eventoController.obtenerResenias(req, res, next));
+  // Flujo 10: comprador consulta reseñas antes de comprar.
+  .get(autenticar, requerirRol("comprador"), (req, res, next) => eventoController.obtenerResenias(req, res, next));
 
 export default router;

@@ -4,6 +4,7 @@ import swaggerUi from "swagger-ui-express";
 
 import usuarioRoutes from "./routes/UsuariosRoute.js";
 import eventoRoutes from "./routes/EventosRoute.js";
+import authRoutes from "./routes/AuthRoute.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 import { errorLogger } from "./middlewares/errorLogger.js";
 import { notFoundHandler } from "./middlewares/notFoundHandler.js";
@@ -28,6 +29,7 @@ app.get("/", (req, res) => res.redirect("/api-docs"));
 // API
 app.use("/api/usuarios", usuarioRoutes);
 app.use("/api/eventos", eventoRoutes);
+app.use("/auth", authRoutes);
 
 //MIDDLEWARES
 app.use(notFoundHandler)

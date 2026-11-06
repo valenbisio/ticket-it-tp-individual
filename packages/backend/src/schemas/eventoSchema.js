@@ -15,7 +15,6 @@ export const crearEventoSchema = z.object({
     (fecha) => new Date(fecha) > new Date(),
     "La fecha debe ser futura",
   ),
-  organizadorId: z.string().trim().min(1, "El organizador es obligatorio"),
   multimedia: z.array(z.string().url()).optional().default([]),
   tiposEntrada: z.array(tipoEntradaSchema).min(1, "Debe incluir al menos un tipo de entrada"),
 });

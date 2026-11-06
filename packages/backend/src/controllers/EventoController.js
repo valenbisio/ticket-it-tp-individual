@@ -34,7 +34,12 @@ export class EventoController {
 
   async crearEvento(req, res, next) {
     try {
-      const evento = await this.eventoService.crearEvento(req.body);
+      const evento = await this.eventoService.crearEvento({
+        ...req.body,
+        organizadorId: req.usuario.id,
+        organizadorNombre: req.usuario.nombre,
+        organizadorApellido: req.usuario.apellido,
+      });
       return res.status(201).json({ evento: serializarEventoCreado(evento) });
     } catch (error) {
       next(error);

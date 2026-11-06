@@ -76,12 +76,15 @@ npm install --prefix packages/frontend
 
 ### 2. Configuración de Variables de Entorno
 
-Creá un archivo `.env` en `packages/backend` basándote en `.env.example`:
+Creá un archivo `.env` en `packages/backend` basándote en `packages/backend/.env.example`:
 
 ```env
 ALLOWED_ORIGINS=http://localhost:8081,http://localhost:3000,http://127.0.0.1:3000
-SERVER_PORT=3001
+SERVER_PORT=8000
+JWT_SECRET=reemplazar-por-un-secreto-aleatorio-de-al-menos-32-caracteres
 ```
+
+La API ofrece `POST /auth/registro`, `POST /auth/login` y `GET /auth/me`. Registro y login reciben/crean cuentas con rol `comprador` u `organizador` y devuelven `{ token, usuario }`; las rutas protegidas reciben `Authorization: Bearer <token>`. El token del frontend se conserva solo en memoria, así que al cerrar o recargar la app hay que iniciar sesión nuevamente. Como el backend también persiste en memoria, las cuentas registradas se reinician al reiniciar el servidor.
 
 ### 3. Ejecución de la Aplicación
 

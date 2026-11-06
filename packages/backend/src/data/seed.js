@@ -7,10 +7,11 @@ import {
   Usuario,
 } from "../models/index.js";
 import { CompraRepository } from "../repositories/CompraRepository.js";
+import { EventoRepository } from "../repositories/EventoRepository.js";
+import { CategoriaRepository } from "../repositories/CategoriaRepository.js";
 
 /**
- * Id del comprador de ejemplo. Existe mientras la aplicación no tenga autenticación:
- * el frontend lo usa para pedir "mis compras" contra la API.
+ * ID histórico del comprador de ejemplo incluido en las compras semilla.
  */
 export const COMPRADOR_DEMO_ID = "usuario-1";
 
@@ -86,6 +87,16 @@ const obraDeTeatroPasada = new Evento({
   tiposEntrada: crearTiposEntrada({ precioGeneral: 7000, precioVip: 14000 }),
   organizador,
 });
+
+// Los routers comparten estas instancias para que las altas y compras
+// realizadas durante la ejecución vean los mismos objetos en memoria.
+export const eventoRepository = new EventoRepository({
+  eventos: [recitalFuturo, festivalDeHoy, obraDeTeatroPasada],
+});
+export const categoriaRepository = new CategoriaRepository([
+  categoriaMusica,
+  categoriaTeatro,
+]);
 
 const [recitalGeneral, recitalVip] = recitalFuturo.tiposEntrada;
 const [festivalGeneral] = festivalDeHoy.tiposEntrada;

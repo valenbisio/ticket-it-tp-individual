@@ -38,12 +38,19 @@ export function serializarComprasDeEvento(evento, compras, hoy = new Date()) {
       fecha: evento.fecha ? evento.fecha.toISOString() : null,
       categoria: evento.categoria?.nombre ?? null,
       multimedia: evento.multimedia ?? [],
-      tiposEntrada: evento.tiposEntrada.map((tipo) => ({
-        nombre: tipo.nombre,
-        descripcion: tipo.descripcion,
-        precio: tipo.precio,
-        cupoDisponible: tipo.cupo,
-      })),
+      tiposEntrada: evento.tiposEntrada.map((tipo) => {
+        const comprometidas = compras
+          .filter((compra) => compra.tipoEntrada === tipo
+            && compra.estado !== EstadoCompra.CANCELADA
+            && compra.estado !== EstadoCompra.REEMBOLSADA)
+          .reduce((total, compra) => total + compra.cantidad, 0);
+        return {
+          nombre: tipo.nombre,
+          descripcion: tipo.descripcion,
+          precio: tipo.precio,
+          cupoDisponible: Math.max(0, Math.min(tipo.cupo, tipo.cupoTotal - comprometidas)),
+        };
+      }),
     },
     compras: compras.map((compra) => ({
       id: compra.id,
@@ -63,3 +70,5 @@ export function serializarComprasDeEvento(evento, compras, hoy = new Date()) {
     })),
   };
 }
+import { EstadoCompra } from "../models/EstadoCompra.js";
+

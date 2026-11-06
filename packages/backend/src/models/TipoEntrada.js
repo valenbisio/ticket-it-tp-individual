@@ -4,6 +4,7 @@ export class TipoEntrada {
     this.descripcion = descripcion;
     this.precio = precio;
     this.cupo = cupo;
+    this.cupoTotal = cupo;
   }
 
   hayCupoPara(cantidad) {
