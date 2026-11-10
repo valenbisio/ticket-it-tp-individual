@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import {
   INITIAL_USERS,
   INITIAL_EVENTS,
@@ -9,8 +9,6 @@ import {
 } from '../data/initialData.js';
 
 const AppContext = createContext(null);
-
-const STORAGE_KEY = 'ai_ticket_it_state_v2';
 
 const eventoYaRealizado = (fecha) => {
   if (!fecha) return true;
@@ -32,71 +30,15 @@ export const AppProvider = ({ children }) => {
   const [selectedEventId, setSelectedEventId] = useState('sonora-2025');
   const [selectedPurchaseId, setSelectedPurchaseId] = useState('TK-8492');
 
-  const [events, setEvents] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY + '_events');
-      return saved ? JSON.parse(saved) : INITIAL_EVENTS;
-    } catch {
-      return INITIAL_EVENTS;
-    }
-  });
-
-  const [purchases, setPurchases] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY + '_purchases');
-      return saved ? JSON.parse(saved) : INITIAL_PURCHASES;
-    } catch {
-      return INITIAL_PURCHASES;
-    }
-  });
-
-  const [chats, setChats] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY + '_chats');
-      return saved ? JSON.parse(saved) : INITIAL_CHATS;
-    } catch {
-      return INITIAL_CHATS;
-    }
-  });
-
-  const [reviews, setReviews] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY + '_reviews');
-      return saved ? JSON.parse(saved) : INITIAL_REVIEWS;
-    } catch {
-      return INITIAL_REVIEWS;
-    }
-  });
+  const [events, setEvents] = useState(INITIAL_EVENTS);
+  const [purchases, setPurchases] = useState(INITIAL_PURCHASES);
+  const [chats, setChats] = useState(INITIAL_CHATS);
+  const [reviews, setReviews] = useState(INITIAL_REVIEWS);
 
   const [favorites, setFavorites] = useState(['sonora-2025']);
   const [toast, setToast] = useState(null);
   const [qrModalPurchase, setQrModalPurchase] = useState(null);
   const [deviceFrameMode, setDeviceFrameMode] = useState(true);
-
-  // Sync to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY + '_events', JSON.stringify(events));
-    } catch {}
-  }, [events]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY + '_purchases', JSON.stringify(purchases));
-    } catch {}
-  }, [purchases]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY + '_chats', JSON.stringify(chats));
-    } catch {}
-  }, [chats]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY + '_reviews', JSON.stringify(reviews));
-    } catch {}
-  }, [reviews]);
 
   const currentUser = users.find((u) => u.id === currentUserId) || users[0];
 
@@ -129,7 +71,6 @@ export const AppProvider = ({ children }) => {
     if (params.purchaseId) setSelectedPurchaseId(params.purchaseId);
     setHistory((prev) => [...prev, screen]);
     setCurrentScreen(screen);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const goBack = () => {
@@ -463,12 +404,6 @@ export const AppProvider = ({ children }) => {
     setChats(INITIAL_CHATS);
     setReviews(INITIAL_REVIEWS);
     setFavorites(['sonora-2025']);
-    try {
-      localStorage.removeItem(STORAGE_KEY + '_events');
-      localStorage.removeItem(STORAGE_KEY + '_purchases');
-      localStorage.removeItem(STORAGE_KEY + '_chats');
-      localStorage.removeItem(STORAGE_KEY + '_reviews');
-    } catch {}
     showToast('Base de datos en memoria reiniciada', 'info');
   };
 
@@ -491,6 +426,8 @@ export const AppProvider = ({ children }) => {
         deviceFrameMode,
         setRole,
         setUser,
+        setSelectedEventId,
+        setSelectedPurchaseId,
         navigateTo,
         goBack,
         toggleFavorite,
