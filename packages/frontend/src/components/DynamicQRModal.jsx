@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useApp } from '../../context/AppContext.jsx';
+import { useApp } from '../contexts/AppContext.jsx';
 
 export const DynamicQRModal = () => {
   const { qrModalPurchase, closeQRModal } = useApp();

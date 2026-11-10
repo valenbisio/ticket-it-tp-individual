@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useApp } from '../../context/AppContext.jsx';
+import { useApp } from '../contexts/AppContext.jsx';
 
 const CRITERIA_OPTIONS = [
   { id: 'qr', label: 'Ingreso con QR ágil', icon: 'speed' },

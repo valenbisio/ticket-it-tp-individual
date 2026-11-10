@@ -1,19 +1,19 @@
 import React from 'react';
-import { AppProvider, useApp } from './context/AppContext.jsx';
-import { Header } from './components/common/Header.jsx';
-import { BottomTabBar } from './components/common/BottomTabBar.jsx';
-import { DynamicQRModal } from './components/common/DynamicQRModal.jsx';
-import { DeviceShell } from './components/common/DeviceShell.jsx';
+import { AppProvider, useApp } from './contexts/AppContext.jsx';
+import { Header } from './components/Header.jsx';
+import { BottomTabBar } from './components/BottomTabBar.jsx';
+import { DynamicQRModal } from './components/DynamicQRModal.jsx';
+import { DeviceShell } from './components/DeviceShell.jsx';
 
-import { RoleSelectScreen } from './components/screens/RoleSelectScreen.jsx';
-import { ExploreEventsScreen } from './components/screens/ExploreEventsScreen.jsx';
-import { EventDetailScreen } from './components/screens/EventDetailScreen.jsx';
-import { MyPurchasesScreen } from './components/screens/MyPurchasesScreen.jsx';
-import { PurchaseChatScreen } from './components/screens/PurchaseChatScreen.jsx';
-import { RateEventScreen } from './components/screens/RateEventScreen.jsx';
-import { OrganizerEventsScreen } from './components/screens/OrganizerEventsScreen.jsx';
-import { OrganizerEventDetailScreen } from './components/screens/OrganizerEventDetailScreen.jsx';
-import { CreateEventScreen } from './components/screens/CreateEventScreen.jsx';
+import { RoleSelectScreen } from './screens/RoleSelectScreen.jsx';
+import { ExploreEventsScreen } from './screens/ExploreEventsScreen.jsx';
+import { EventDetailScreen } from './screens/EventDetailScreen.jsx';
+import { MyPurchasesScreen } from './screens/MyPurchasesScreen.jsx';
+import { PurchaseChatScreen } from './screens/PurchaseChatScreen.jsx';
+import { RateEventScreen } from './screens/RateEventScreen.jsx';
+import { OrganizerEventsScreen } from './screens/OrganizerEventsScreen.jsx';
+import { OrganizerEventDetailScreen } from './screens/OrganizerEventDetailScreen.jsx';
+import { CreateEventScreen } from './screens/CreateEventScreen.jsx';
 
 function MainApp() {
   const { currentScreen } = useApp();

@@ -1,5 +1,6 @@
+/* eslint-disable react/prop-types */
 import React from 'react';
-import { useApp } from '../../context/AppContext.jsx';
+import { useApp } from '../contexts/AppContext.jsx';
 
 export const Header = ({
   showBack = false,

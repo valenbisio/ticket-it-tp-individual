@@ -1,5 +1,5 @@
 import React from 'react';
-import { RoleSelector } from '../common/RoleSelector.jsx';
+import { RoleSelector } from '../components/RoleSelector.jsx';
 
 /**
  * Screen 1: Selección de rol inicial

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useApp } from '../../context/AppContext.jsx';
+import { useApp } from '../contexts/AppContext.jsx';
 
 export const BottomTabBar = () => {
   const { currentScreen, navigateTo, purchases } = useApp();

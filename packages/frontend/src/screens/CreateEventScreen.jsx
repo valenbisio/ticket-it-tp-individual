@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useApp } from '../../context/AppContext.jsx';
+import { useApp } from '../contexts/AppContext.jsx';
 
 const CATEGORIES = ['Recitales', 'Festivales', 'Teatro', 'Conferencias', 'Deportes'];
 

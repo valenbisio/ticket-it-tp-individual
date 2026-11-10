@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useApp } from '../../context/AppContext.jsx';
+import { useApp } from '../contexts/AppContext.jsx';
 
 export const EventDetailScreen = () => {
   const {
@@ -683,7 +683,7 @@ export const EventDetailScreen = () => {
                     </div>
 
                     <p className="text-xs text-on-surface-variant leading-relaxed">
-                      "{rev.comment}"
+                      &quot;{rev.comment}&quot;
                     </p>
 
                     {rev.criteria && rev.criteria.length > 0 && (

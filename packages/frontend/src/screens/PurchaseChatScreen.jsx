@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useApp } from '../../context/AppContext.jsx';
+import { useApp } from '../contexts/AppContext.jsx';
 
 export const PurchaseChatScreen = () => {
   const {
@@ -7,7 +7,6 @@ export const PurchaseChatScreen = () => {
     purchases,
     selectedPurchaseId,
     currentUser,
-    currentRole,
     sendChatMessage,
     goBack,
   } = useApp();
@@ -36,15 +35,6 @@ export const PurchaseChatScreen = () => {
     sendChatMessage(purchase.id, inputText);
     setInputText('');
 
-    // If buyer sends a message and organizer hasn't answered, simulate realistic organizer reply after 1.2s
-    if (currentRole === 'buyer') {
-      setTimeout(() => {
-        sendChatMessage(
-          purchase.id,
-          '¡Gracias por tu mensaje! El equipo de atención de la sala está disponible para asistirte en el ingreso.'
-        );
-      }, 1500);
-    }
   };
 
   const handleQuickReply = (text) => {

@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import {
   INITIAL_USERS,
@@ -10,6 +11,16 @@ import {
 const AppContext = createContext(null);
 
 const STORAGE_KEY = 'ai_ticket_it_state_v2';
+
+const eventoYaRealizado = (fecha) => {
+  if (!fecha) return true;
+  const [year, month, day] = fecha.split('-').map(Number);
+  if (!year || !month || !day) return true;
+  const fechaEvento = new Date(year, month - 1, day);
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  return fechaEvento < hoy;
+};
 
 export const AppProvider = ({ children }) => {
   const [users] = useState(INITIAL_USERS);
@@ -159,6 +170,16 @@ export const AppProvider = ({ children }) => {
     const ev = events.find((e) => e.id === eventId);
     if (!ev) return null;
 
+    if (!Number.isInteger(quantity) || quantity < 1) {
+      showToast('La cantidad de entradas debe ser un número válido', 'error');
+      return null;
+    }
+
+    if (ev.status !== 'active' || eventoYaRealizado(ev.date)) {
+      showToast('Este evento ya no está disponible para la compra', 'error');
+      return null;
+    }
+
     const tier = ev.tiers.find((t) => t.id === tierId);
     if (!tier) return null;
 
@@ -168,18 +189,15 @@ export const AppProvider = ({ children }) => {
     }
 
     // Update tier sold quota
-    const updatedEvents = events.map((e) => {
-      if (e.id === eventId) {
-        return {
-          ...e,
-          tiers: e.tiers.map((t) =>
-            t.id === tierId ? { ...t, soldCount: t.soldCount + quantity } : t
-          ),
-        };
-      }
-      return e;
-    });
-    setEvents(updatedEvents);
+    setEvents((prev) => prev.map((e) => {
+      if (e.id !== eventId) return e;
+      return {
+        ...e,
+        tiers: e.tiers.map((t) =>
+          t.id === tierId ? { ...t, soldCount: t.soldCount + quantity } : t
+        ),
+      };
+    }));
 
     const newPurchaseId = `TK-${Math.floor(1000 + Math.random() * 9000)}`;
     const newPurchase = {
@@ -206,7 +224,7 @@ export const AppProvider = ({ children }) => {
       expiresIn: paymentStatus === 'pendiente' ? '2h 00m' : undefined,
     };
 
-    setPurchases([newPurchase, ...purchases]);
+    setPurchases((prev) => [newPurchase, ...prev]);
 
     // Initialize chat thread for this purchase
     if (!chats[newPurchaseId]) {
@@ -238,6 +256,12 @@ export const AppProvider = ({ children }) => {
   const cancelAndRefundPurchase = (purchaseId) => {
     const item = purchases.find((p) => p.id === purchaseId);
     if (!item) return false;
+
+    const event = events.find((ev) => ev.id === item.eventId);
+    if (!event || eventoYaRealizado(event.date)) {
+      showToast('No es posible cancelar después de la fecha del evento', 'error');
+      return false;
+    }
 
     if (item.status === 'utilizada') {
       showToast('No es posible cancelar una entrada ya utilizada', 'error');
@@ -279,6 +303,11 @@ export const AppProvider = ({ children }) => {
     const item = purchases.find((p) => p.id === purchaseId);
     if (!item) return false;
 
+    if (item.status !== 'confirmada') {
+      showToast('Solo se pueden validar entradas confirmadas', 'error');
+      return false;
+    }
+
     const nowStr = `${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} hs • Molinete Control`;
 
     setPurchases((prev) =>
@@ -292,6 +321,12 @@ export const AppProvider = ({ children }) => {
   };
 
   const payPendingPurchase = (purchaseId) => {
+    const item = purchases.find((p) => p.id === purchaseId);
+    if (!item || item.status !== 'pendiente') {
+      showToast('Esta compra no está pendiente de pago', 'error');
+      return false;
+    }
+
     setPurchases((prev) =>
       prev.map((p) =>
         p.id === purchaseId ? { ...p, status: 'confirmada', expiresIn: undefined } : p
@@ -326,6 +361,23 @@ export const AppProvider = ({ children }) => {
   };
 
   const submitReview = (purchaseId, eventId, rating, criteria, comment) => {
+    const purchase = purchases.find((p) => p.id === purchaseId);
+    if (
+      !purchase ||
+      purchase.buyerId !== currentUser.id ||
+      purchase.eventId !== eventId ||
+      purchase.status !== 'utilizada' ||
+      purchase.hasRated
+    ) {
+      showToast('Solo puedes calificar una vez una entrada utilizada', 'error');
+      return false;
+    }
+
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5 || !comment.trim()) {
+      showToast('Ingresa un puntaje y un comentario para publicar la reseña', 'error');
+      return false;
+    }
+
     const ev = events.find((e) => e.id === eventId);
     const newRev = {
       id: `rev-${Date.now()}`,
@@ -373,6 +425,7 @@ export const AppProvider = ({ children }) => {
     );
 
     showToast('¡Gracias por tu reseña! Calificación publicada.', 'success');
+    return true;
   };
 
   const createEvent = (newEventData) => {
