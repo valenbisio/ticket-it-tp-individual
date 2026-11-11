@@ -1,3 +1,8 @@
+/**
+ * In-Memory Mock & Initial Database for AI Ticket It
+ * Supports both standalone Expo execution and Backend synchronization.
+ */
+
 export const INITIAL_USERS = [
   {
     id: 'juan',
@@ -30,7 +35,7 @@ export const INITIAL_USERS = [
 export const INITIAL_EVENTS = [
   {
     id: 'sonora-2025',
-    name: 'Festival Sonora 2025',
+    name: 'Festival Sonora 2026',
     organizerId: 'salanorte',
     organizerName: 'Sala Norte Producciones',
     organizerRating: 4.9,
@@ -38,8 +43,8 @@ export const INITIAL_EVENTS = [
     category: 'Festivales',
     description:
       'El encuentro musical vanguardista de la temporada que une beats electrónicos, pop alternativo e instalaciones lumínicas de escala monumental. Espacio gastronómico gourmet, áreas chill out y sonido envolvente 360° en el predio más amplio de la ciudad.',
-    date: '2025-11-15',
-    displayDate: 'Sábado 15 Nov 2025',
+    date: '2026-12-19',
+    displayDate: 'Sábado 19 Dic 2026',
     doorTime: '17:30',
     showTime: '20:00',
     venue: 'Parque de la Ciudad, Escenario Principal',
@@ -103,8 +108,8 @@ export const INITIAL_EVENTS = [
     category: 'Recitales',
     description:
       'Una velada acústica íntima en San Telmo con los mejores solistas de vientos, trompeta y contrabajo clásico de la escena porteña. Carta de cócteles clásicos y tapas de autor.',
-    date: '2025-10-22',
-    displayDate: 'Miércoles 22 Oct 2025',
+    date: '2026-11-25',
+    displayDate: 'Miércoles 25 Nov 2026',
     doorTime: '20:00',
     showTime: '21:30',
     venue: 'The Blue Club, San Telmo',
@@ -140,8 +145,8 @@ export const INITIAL_EVENTS = [
     category: 'Teatro',
     description:
       'Una puesta en escena disruptiva y visceral de la tragedia de Shakespeare adaptada a la era de la hiperconexión y la soledad urbana, con dirección premiada y elenco estelar.',
-    date: '2025-11-05',
-    displayDate: 'Miércoles 05 Nov 2025',
+    date: '2026-12-09',
+    displayDate: 'Miércoles 09 Dic 2026',
     doorTime: '19:45',
     showTime: '20:30',
     venue: 'Teatro San Martín, Sala Casacuberta',
@@ -177,8 +182,8 @@ export const INITIAL_EVENTS = [
     category: 'Conferencias',
     description:
       'La cumbre anual que congrega a los líderes de inteligencia artificial, robótica, computación cuántica y startups de alto impacto de toda América Latina.',
-    date: '2025-12-12',
-    displayDate: 'Viernes 12 Dic 2025',
+    date: '2026-12-18',
+    displayDate: 'Viernes 18 Dic 2026',
     doorTime: '08:30',
     showTime: '09:30',
     venue: 'Centro de Convenciones Bs As (CEC)',
@@ -242,9 +247,9 @@ export const INITIAL_PURCHASES = [
     buyerName: 'Juan Pérez',
     buyerAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
     eventId: 'sonora-2025',
-    eventName: 'Festival Sonora 2025',
-    eventDate: '2025-11-15',
-    eventDisplayDate: 'Sábado 15 Nov, 20:00 hs',
+    eventName: 'Festival Sonora 2026',
+    eventDate: '2026-12-19',
+    eventDisplayDate: 'Sábado 19 Dic, 20:00 hs',
     venue: 'Parque de la Ciudad, Escenario Principal',
     organizerId: 'salanorte',
     organizerName: 'Sala Norte Producciones',
@@ -264,9 +269,9 @@ export const INITIAL_PURCHASES = [
     buyerName: 'Lucía Gómez',
     buyerAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
     eventId: 'sonora-2025',
-    eventName: 'Festival Sonora 2025',
-    eventDate: '2025-11-15',
-    eventDisplayDate: 'Sábado 15 Nov, 20:00 hs',
+    eventName: 'Festival Sonora 2026',
+    eventDate: '2026-12-19',
+    eventDisplayDate: 'Sábado 19 Dic, 20:00 hs',
     venue: 'Parque de la Ciudad, Escenario Principal',
     organizerId: 'salanorte',
     organizerName: 'Sala Norte Producciones',
@@ -310,8 +315,8 @@ export const INITIAL_PURCHASES = [
     buyerAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
     eventId: 'jazz-blues-2025',
     eventName: 'Noche de Jazz & Blues',
-    eventDate: '2025-10-22',
-    eventDisplayDate: 'Mañana, 21:30 hs',
+    eventDate: '2026-11-25',
+    eventDisplayDate: 'Miércoles 25 Nov, 21:30 hs',
     venue: 'The Blue Club, San Telmo',
     organizerId: 'salanorte',
     organizerName: 'Sala Norte Producciones',
@@ -320,7 +325,7 @@ export const INITIAL_PURCHASES = [
     quantity: 1,
     unitPrice: 8500,
     totalPrice: 8500,
-    status: 'pendiente',
+    status: 'pendiente de pago',
     purchaseDate: '2025-10-21',
     expiresIn: '2h 15m',
     qrCodeToken: 'AIT-JAZZ-8511-PENDING-5512',

@@ -76,7 +76,7 @@ const router = express.Router();
  *         description: La categoría indicada no existe
  */
 // Flujos 3 y 11: búsqueda, exploración y ordenamiento de eventos para compradores.
-router.route("/").get(autenticar, requerirRol("comprador"), validarQuerySchema(busquedaEventoSchema), (req, res, next) => eventoController.buscarEventos(req, res, next));
+router.route("/").get(autenticar, requerirRol("comprador", "organizador"), validarQuerySchema(busquedaEventoSchema), (req, res, next) => eventoController.buscarEventos(req, res, next));
 
 /**
  * @swagger
@@ -144,7 +144,7 @@ router.route("/").post(autenticar, requerirRol("organizador"), validarSchema(cre
 router
   .route("/categorias")
   // Flujo 3: exploración del catálogo por categorías.
-  .get(autenticar, requerirRol("comprador"), (req, res, next) => eventoController.obtenerCategorias(req, res, next));
+  .get(autenticar, requerirRol("comprador", "organizador"), (req, res, next) => eventoController.obtenerCategorias(req, res, next));
 
 /**
  * @swagger

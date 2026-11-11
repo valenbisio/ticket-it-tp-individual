@@ -1,383 +1,428 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { View, Text, StyleSheet, FlatList, Pressable, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useApp } from '../contexts/AppContext.jsx';
+import { Header } from '../components/common/Header.jsx';
+import { BottomTabBar } from '../components/common/BottomTabBar.jsx';
+import { StatusBadge } from '../components/common/StatusBadge.jsx';
+import { colors, spacing, borderRadius } from '../data/theme.js';
+import { getDaysUntilEvent, getDaysLabel, canCancelPurchase } from '../utils/purchases.js';
+
+const STATUS_TABS = ['Todas', 'Confirmadas', 'Pendientes', 'Utilizadas', 'Canceladas', 'Reembolsadas'];
 
 export const MyPurchasesScreen = () => {
-  const {
-    purchases,
-    currentUser,
-    navigateTo,
-    openQRModal,
-    cancelAndRefundPurchase,
-    payPendingPurchase,
-  } = useApp();
+  const router = useRouter();
+  const { purchases, setActiveQR, currentUser, cancelPurchase } = useApp();
+  const [selectedTab, setSelectedTab] = useState('Todas');
 
-  const [activeFilter, setActiveFilter] = useState('all');
-
-  // Filter purchases for current buyer
-  const userPurchases = purchases.filter((p) => p.buyerId === currentUser.id);
-
-  const filteredPurchases = userPurchases.filter((p) => {
-    if (activeFilter === 'all') return true;
-    if (activeFilter === 'confirmada') return p.status === 'confirmada';
-    if (activeFilter === 'pendiente') return p.status === 'pendiente';
-    if (activeFilter === 'historial')
-      return p.status === 'utilizada' || p.status === 'reembolsada' || p.status === 'cancelada';
-    return true;
-  });
-
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'confirmada':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-bold">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            Confirmada
-          </span>
-        );
-      case 'pendiente':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-400/15 text-amber-300 text-[10px] font-bold">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
-            Pendiente de pago
-          </span>
-        );
-      case 'utilizada':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-surface-variant text-on-surface-variant text-[10px] font-bold">
-            <span className="material-symbols-outlined text-[12px]">check_circle</span>
-            Entrada utilizada
-          </span>
-        );
-      case 'reembolsada':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-secondary-container/30 text-secondary text-[10px] font-bold">
-            <span className="w-1.5 h-1.5 rounded-full bg-secondary" />
-            Reembolsada
-          </span>
-        );
-      case 'cancelada':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-error-container/40 text-error text-[10px] font-bold">
-            Cancelada
-          </span>
-        );
-      default:
-        return null;
+  // Filter purchases by tab
+  const filteredPurchases = useMemo(() => {
+    let list = purchases.filter((p) => p.buyerId === currentUser.id);
+    if (selectedTab === 'Confirmadas') {
+      return list.filter((p) => p.status === 'confirmada');
     }
+    if (selectedTab === 'Pendientes') {
+      return list.filter((p) => p.status === 'pendiente de pago');
+    }
+    if (selectedTab === 'Utilizadas') {
+      return list.filter((p) => p.status === 'utilizada');
+    }
+    if (selectedTab === 'Canceladas') {
+      return list.filter((p) => p.status === 'cancelada');
+    }
+    if (selectedTab === 'Reembolsadas') {
+      return list.filter((p) => p.status === 'reembolsada');
+    }
+    return list;
+  }, [purchases, currentUser.id, selectedTab]);
+
+  const handleCancel = (item) => {
+    const isRefund = item.status === 'confirmada';
+    Alert.alert(
+      isRefund ? 'Cancelar y reembolsar' : 'Cancelar compra',
+      isRefund
+        ? `¿Querés cancelar tu compra de ${item.eventName}? Se te reembolsará el total de $${item.totalPrice?.toLocaleString('es-AR')}.`
+        : `¿Querés cancelar tu compra pendiente de ${item.eventName}?`,
+      [
+        { text: 'Volver', style: 'cancel' },
+        { text: 'Sí, cancelar', style: 'destructive', onPress: () => cancelPurchase(item.id) },
+      ]
+    );
   };
 
-  const calculateDaysRemaining = (eventDateStr) => {
-    try {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const evDate = new Date(eventDateStr);
-      evDate.setHours(0, 0, 0, 0);
-      const diffTime = evDate.getTime() - today.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return diffDays > 0 ? diffDays : 0;
-    } catch {
-      return 14;
-    }
-  };
+  const renderPurchaseItem = ({ item }) => {
+    const isConfirmed = item.status === 'confirmada';
+    const isUsed = item.status === 'utilizada';
+    const daysLabel = isConfirmed ? getDaysLabel(getDaysUntilEvent(item.eventDate)) : null;
+    const isCancellable = canCancelPurchase(item);
 
-  const handleCancelClick = (purchase) => {
-    if (
-      window.confirm(
-        `¿Deseas cancelar la orden #${purchase.id} de "${purchase.eventName}" y solicitar el reembolso total de $${purchase.totalPrice.toLocaleString(
-          'es-AR'
-        )}?`
-      )
-    ) {
-      cancelAndRefundPurchase(purchase.id);
-    }
+    return (
+      <View style={styles.purchaseCard}>
+        {/* Top Header: Event & Status */}
+        <View style={styles.cardTopRow}>
+          <View style={styles.eventInfoCol}>
+            <Text style={styles.eventName}>{item.eventName}</Text>
+            <Text style={styles.eventDate}>📅 {item.eventDisplayDate || item.eventDate}</Text>
+            {daysLabel && <Text style={styles.daysLeftText}>⏳ {daysLabel}</Text>}
+          </View>
+          <StatusBadge status={item.status} />
+        </View>
+
+        {/* Ticket Details */}
+        <View style={styles.detailsBox}>
+          <View style={styles.detailItem}>
+            <Text style={styles.detailLabel}>Entradas</Text>
+            <Text style={styles.detailValue}>
+              {item.tierName} × {item.quantity}
+            </Text>
+          </View>
+          <View style={styles.detailItem}>
+            <Text style={styles.detailLabel}>Total Pagado</Text>
+            <Text style={styles.detailValuePrice}>${item.totalPrice?.toLocaleString('es-AR')}</Text>
+          </View>
+          <View style={styles.detailItem}>
+            <Text style={styles.detailLabel}>Código</Text>
+            <Text style={styles.detailValueCode}>{item.id}</Text>
+          </View>
+        </View>
+
+        {/* Actions Row */}
+        <View style={styles.actionsRow}>
+          {/* Action 1: QR button if confirmada */}
+          {isConfirmed && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Ver entrada con QR dinámico para ${item.eventName}`}
+              onPress={() => setActiveQR(item)}
+              style={({ pressed }) => [styles.qrActionBtn, pressed && styles.btnPressed]}
+            >
+              <Text style={styles.qrActionIcon}>⚡</Text>
+              <Text style={styles.qrActionText}>Ver Entrada / QR</Text>
+            </Pressable>
+          )}
+
+          {/* Action 2: Rate button if utilizada */}
+          {isUsed && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Calificar evento ${item.eventName}`}
+              onPress={() => router.push(`/(buyer)/rate/${item.id}`)}
+              style={({ pressed }) => [
+                styles.rateActionBtn,
+                item.hasRated && styles.alreadyRatedBtn,
+                pressed && styles.btnPressed,
+              ]}
+            >
+              <Text style={styles.rateActionIcon}>★</Text>
+              <Text style={styles.rateActionText}>
+                {item.hasRated ? 'Calificado' : 'Calificar Evento'}
+              </Text>
+            </Pressable>
+          )}
+
+          {/* Action 3: Chat button with organizer */}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Abrir chat con organizador para compra ${item.id}`}
+            onPress={() => router.push(`/(buyer)/chat/${item.id}`)}
+            style={({ pressed }) => [styles.chatActionBtn, pressed && styles.btnPressed]}
+          >
+            <Text style={styles.chatActionIcon}>💬</Text>
+            <Text style={styles.chatActionText}>Chat con Organizador</Text>
+          </Pressable>
+        </View>
+
+        {/* Cancel button (solo si no está utilizada y el evento aún no se realizó) */}
+        {isCancellable && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Cancelar compra ${item.id}`}
+            onPress={() => handleCancel(item)}
+            style={({ pressed }) => [styles.cancelActionBtn, pressed && styles.btnPressed]}
+          >
+            <Text style={styles.cancelActionText}>
+              {isConfirmed ? 'Cancelar y reembolsar' : 'Cancelar compra'}
+            </Text>
+          </Pressable>
+        )}
+      </View>
+    );
   };
 
   return (
-    <div className="flex-1 flex flex-col w-full pb-28 pt-2 px-4 space-y-4">
-      {/* Header Titular */}
-      <div className="flex flex-col gap-1 mt-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h1 className="font-headline font-extrabold text-2xl text-on-surface">
-              Mis Compras
-            </h1>
-            <span className="w-2 h-2 rounded-full bg-tertiary animate-pulse" />
-          </div>
-          <span className="text-xs font-mono text-tertiary">
-            {userPurchases.length} ticket{userPurchases.length === 1 ? '' : 's'}
-          </span>
-        </div>
-        <p className="text-xs text-on-surface-variant leading-relaxed">
-          Gestiona tus entradas, accede al QR dinámico anti-fraude y chatea con los organizadores.
-        </p>
-      </div>
+    <View style={styles.screen}>
+      <Header subtitle="Mis Compras" />
 
-      {/* Filter Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-4 px-4 no-scrollbar">
-        <button
-          type="button"
-          onClick={() => setActiveFilter('all')}
-          className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all active:scale-95 ${
-            activeFilter === 'all'
-              ? 'bg-primary text-on-primary shadow-md'
-              : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface'
-          }`}
-        >
-          Todas ({userPurchases.length})
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveFilter('confirmada')}
-          className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all active:scale-95 ${
-            activeFilter === 'confirmada'
-              ? 'bg-primary text-on-primary shadow-md'
-              : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface'
-          }`}
-        >
-          Confirmadas ({userPurchases.filter((p) => p.status === 'confirmada').length})
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveFilter('pendiente')}
-          className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all active:scale-95 ${
-            activeFilter === 'pendiente'
-              ? 'bg-primary text-on-primary shadow-md'
-              : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface'
-          }`}
-        >
-          Pendientes ({userPurchases.filter((p) => p.status === 'pendiente').length})
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveFilter('historial')}
-          className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all active:scale-95 ${
-            activeFilter === 'historial'
-              ? 'bg-primary text-on-primary shadow-md'
-              : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface'
-          }`}
-        >
-          Historial (
-          {
-            userPurchases.filter(
-              (p) =>
-                p.status === 'utilizada' ||
-                p.status === 'reembolsada' ||
-                p.status === 'cancelada'
-            ).length
-          }
-          )
-        </button>
-      </div>
-
-      {/* Lista de Compras */}
-      <div className="flex flex-col gap-4 mt-1">
-        {filteredPurchases.length === 0 ? (
-          <div className="py-12 flex flex-col items-center justify-center text-center p-6 bg-surface-container-low rounded-2xl border border-surface-container-high/40">
-            <span className="material-symbols-outlined text-[42px] text-on-surface-variant mb-2">
-              receipt_long
-            </span>
-            <h3 className="font-headline font-bold text-base text-on-surface">
-              No tienes compras en esta categoría
-            </h3>
-            <p className="text-xs text-on-surface-variant mt-1 max-w-xs">
-              Explora la cartelera para adquirir entradas seguras.
-            </p>
-            <button
-              onClick={() => navigateTo('buyer_explore')}
-              className="mt-4 px-4 py-2 rounded-xl bg-primary text-xs font-bold text-on-primary hover:bg-primary-container"
-            >
-              Explorar Eventos
-            </button>
-          </div>
-        ) : (
-          filteredPurchases.map((purchase) => {
-            const daysLeft = calculateDaysRemaining(purchase.eventDate);
-
+      {/* Tabs */}
+      <View style={styles.tabsWrapper}>
+        <FlatList
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          data={STATUS_TABS}
+          keyExtractor={(item) => item}
+          contentContainerStyle={styles.tabsContainer}
+          renderItem={({ item }) => {
+            const isSelected = selectedTab === item;
             return (
-              <article
-                key={purchase.id}
-                className={`ticket-card relative rounded-2xl overflow-hidden shadow-xl border transition-all ${
-                  purchase.status === 'confirmada'
-                    ? 'bg-surface-container border-primary/30'
-                    : purchase.status === 'pendiente'
-                    ? 'bg-surface-container border-amber-500/30'
-                    : 'bg-surface-container-low border-surface-container-high/50 opacity-90'
-                }`}
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setSelectedTab(item)}
+                style={[styles.tabPill, isSelected && styles.selectedTabPill]}
               >
-                {/* Header Strip with Status and ID */}
-                <div className="p-4 flex flex-col gap-3">
-                  <div className="flex items-center justify-between">
-                    {getStatusBadge(purchase.status)}
-                    <span className="text-xs font-mono font-bold text-primary">
-                      #{purchase.id}
-                    </span>
-                  </div>
-
-                  {/* Event Info and Price */}
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex flex-col min-w-0">
-                      <h2
-                        className={`font-headline font-bold text-base text-on-surface truncate ${
-                          purchase.status === 'reembolsada' ? 'line-through opacity-70' : ''
-                        }`}
-                      >
-                        {purchase.eventName}
-                      </h2>
-                      <p className="text-xs text-on-surface-variant mt-0.5 truncate">
-                        {purchase.venue}
-                      </p>
-                      <p className="text-[11px] text-tertiary font-semibold mt-0.5">
-                        {purchase.eventDisplayDate}
-                      </p>
-                    </div>
-
-                    <div className="text-right shrink-0">
-                      <span
-                        className={`font-headline text-base font-bold ${
-                          purchase.status === 'reembolsada'
-                            ? 'line-through text-on-surface-variant'
-                            : 'text-primary'
-                        }`}
-                      >
-                        ${purchase.totalPrice.toLocaleString('es-AR')}
-                      </span>
-                      <p className="text-[10px] text-on-surface-variant uppercase font-semibold">
-                        {purchase.tierName} × {purchase.quantity}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Notice: Days Remaining on Confirmed Tickets */}
-                  {purchase.status === 'confirmada' && (
-                    <div className="flex items-center justify-between p-2.5 bg-tertiary-container/15 rounded-xl text-tertiary border border-tertiary/20">
-                      <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-[18px]">
-                          hourglass_top
-                        </span>
-                        <span className="text-xs font-bold">
-                          Faltan {daysLeft} días para el evento
-                        </span>
-                      </div>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-tertiary/20 font-bold">
-                        Pase Listo
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Notice: Pending Payment Alert */}
-                  {purchase.status === 'pendiente' && (
-                    <div className="flex items-center justify-between p-2.5 bg-amber-400/15 rounded-xl text-amber-300 border border-amber-400/20">
-                      <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-[18px]">
-                          alarm
-                        </span>
-                        <span className="text-xs font-bold">
-                          Vence en {purchase.expiresIn || '2 horas'}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => payPendingPurchase(purchase.id)}
-                        className="text-xs font-bold text-on-primary bg-primary px-3 py-1 rounded-lg hover:bg-primary-container"
-                      >
-                        Pagar Ahora
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Perforated Stub Line */}
-                  <div className="relative my-1 flex items-center justify-center">
-                    <div className="w-full border-t border-dashed border-outline-variant/50" />
-                    <div className="absolute -left-6 w-4 h-4 bg-surface rounded-full shadow-inner" />
-                    <div className="absolute -right-6 w-4 h-4 bg-surface rounded-full shadow-inner" />
-                  </div>
-
-                  {/* Action CTAs */}
-                  <div className="flex flex-col gap-2 pt-1">
-                    {/* Primary QR Button for Confirmed Tickets */}
-                    {purchase.status === 'confirmada' && (
-                      <button
-                        type="button"
-                        onClick={() => openQRModal(purchase)}
-                        className="w-full h-11 rounded-xl bg-primary text-on-primary font-bold text-xs flex items-center justify-center gap-2 shadow-md active:scale-[0.98] transition-all hover:bg-primary-container"
-                      >
-                        <span className="material-symbols-outlined text-[18px]">
-                          qr_code_scanner
-                        </span>
-                        <span>Ver Código QR Dinámico</span>
-                      </button>
-                    )}
-
-                    {/* Secondary Actions Row */}
-                    <div className="grid grid-cols-2 gap-2">
-                      {/* Chat always available */}
-                      <button
-                        type="button"
-                        onClick={() =>
-                          navigateTo('purchase_chat', { purchaseId: purchase.id })
-                        }
-                        className="h-10 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors active:scale-95"
-                      >
-                        <span className="material-symbols-outlined text-[16px] text-tertiary">
-                          chat
-                        </span>
-                        <span>Chat Soporte</span>
-                      </button>
-
-                      {/* Cancel / Refund only if not used and confirmed */}
-                      {purchase.status === 'confirmada' && (
-                        <button
-                          type="button"
-                          onClick={() => handleCancelClick(purchase)}
-                          className="h-10 rounded-xl bg-secondary-container/20 hover:bg-secondary-container/30 text-secondary font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors active:scale-95"
-                        >
-                          <span className="material-symbols-outlined text-[16px]">
-                            currency_exchange
-                          </span>
-                          <span>Reembolsar</span>
-                        </button>
-                      )}
-
-                      {/* Rate action if used and not yet rated */}
-                      {purchase.status === 'utilizada' && (
-                        <button
-                          type="button"
-                          disabled={purchase.hasRated}
-                          onClick={() =>
-                            navigateTo('rate_event', {
-                              purchaseId: purchase.id,
-                              eventId: purchase.eventId,
-                            })
-                          }
-                          className={`h-10 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors active:scale-95 ${
-                            purchase.hasRated
-                              ? 'bg-surface-variant text-on-surface-variant/40 cursor-not-allowed'
-                              : 'bg-primary-container text-on-primary-container shadow-sm hover:brightness-110'
-                          }`}
-                        >
-                          <span
-                            className="material-symbols-outlined text-[16px]"
-                            style={{ fontVariationSettings: "'FILL' 1" }}
-                          >
-                            star
-                          </span>
-                          <span>{purchase.hasRated ? 'Calificado' : '★ Calificar'}</span>
-                        </button>
-                      )}
-
-                      {purchase.status === 'reembolsada' && (
-                        <div className="h-10 rounded-xl bg-surface-container-high/40 text-on-surface-variant text-xs flex items-center justify-center font-mono">
-                          Reembolso OK
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </article>
+                <Text style={[styles.tabPillText, isSelected && styles.selectedTabPillText]}>
+                  {item}
+                </Text>
+              </Pressable>
             );
-          })
-        )}
-      </div>
-    </div>
+          }}
+        />
+      </View>
+
+      {/* Purchases List */}
+      <FlatList
+        data={filteredPurchases}
+        keyExtractor={(item) => item.id}
+        renderItem={renderPurchaseItem}
+        contentContainerStyle={styles.listContainer}
+        ListEmptyComponent={
+          <View style={styles.emptyCenter}>
+            <Text style={styles.emptyEmoji}>🎟️</Text>
+            <Text style={styles.emptyTitle}>No tienes compras en este estado</Text>
+            <Text style={styles.emptySubtitle}>
+              Explora el catálogo y adquiere tus entradas con QR dinámico.
+            </Text>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push('/(buyer)/explore')}
+              style={styles.exploreCta}
+            >
+              <Text style={styles.exploreCtaText}>Ir a Explorar Eventos</Text>
+            </Pressable>
+          </View>
+        }
+      />
+
+      <BottomTabBar />
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: colors.surface,
+  },
+  tabsWrapper: {
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.surfaceContainerLow,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.surfaceContainerHigh,
+  },
+  tabsContainer: {
+    paddingHorizontal: spacing.md,
+    gap: spacing.xs,
+  },
+  tabPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.surfaceContainerHigh,
+  },
+  selectedTabPill: {
+    backgroundColor: colors.primaryContainer,
+  },
+  tabPillText: {
+    color: colors.onSurfaceVariant,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  selectedTabPillText: {
+    color: colors.onPrimaryContainer,
+    fontWeight: '800',
+  },
+  listContainer: {
+    padding: spacing.md,
+    paddingBottom: 24,
+  },
+  purchaseCard: {
+    backgroundColor: colors.surfaceContainerHigh,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.surfaceContainerHighest,
+  },
+  cardTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.sm,
+  },
+  eventInfoCol: {
+    flex: 1,
+    paddingRight: 10,
+  },
+  eventName: {
+    color: colors.onSurface,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  eventDate: {
+    color: colors.onSurfaceVariant,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  daysLeftText: {
+    color: colors.tertiary,
+    fontSize: 12,
+    fontWeight: '800',
+    marginTop: 4,
+  },
+  cancelActionBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.error,
+    paddingVertical: 9,
+    borderRadius: borderRadius.md,
+    marginTop: spacing.sm,
+  },
+  cancelActionText: {
+    color: colors.error,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  detailsBox: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surfaceContainerLow,
+    borderRadius: borderRadius.md,
+    padding: spacing.sm,
+    marginVertical: spacing.xs,
+  },
+  detailItem: {
+    alignItems: 'center',
+  },
+  detailLabel: {
+    color: colors.outline,
+    fontSize: 9,
+    textTransform: 'uppercase',
+  },
+  detailValue: {
+    color: colors.onSurface,
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  detailValuePrice: {
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: '800',
+    marginTop: 2,
+  },
+  detailValueCode: {
+    color: colors.outlineVariant,
+    fontSize: 10,
+    marginTop: 2,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  qrActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    paddingVertical: 9,
+    borderRadius: borderRadius.md,
+  },
+  qrActionIcon: {
+    fontSize: 13,
+    marginRight: 4,
+    color: colors.onPrimary,
+  },
+  qrActionText: {
+    color: colors.onPrimary,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  rateActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.tertiaryContainer,
+    paddingVertical: 9,
+    borderRadius: borderRadius.md,
+  },
+  alreadyRatedBtn: {
+    backgroundColor: colors.surfaceContainerHighest,
+  },
+  rateActionIcon: {
+    fontSize: 13,
+    marginRight: 4,
+    color: colors.onTertiary,
+  },
+  rateActionText: {
+    color: colors.onTertiary,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  chatActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceContainerHighest,
+    paddingVertical: 9,
+    borderRadius: borderRadius.md,
+  },
+  chatActionIcon: {
+    fontSize: 12,
+    marginRight: 4,
+  },
+  chatActionText: {
+    color: colors.onSurface,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  btnPressed: {
+    opacity: 0.8,
+  },
+  emptyCenter: {
+    alignItems: 'center',
+    paddingVertical: 50,
+  },
+  emptyEmoji: {
+    fontSize: 44,
+    marginBottom: 10,
+  },
+  emptyTitle: {
+    color: colors.onSurface,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  emptySubtitle: {
+    color: colors.onSurfaceVariant,
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 4,
+    maxWidth: 260,
+  },
+  exploreCta: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: borderRadius.md,
+    marginTop: 16,
+  },
+  exploreCtaText: {
+    color: colors.onPrimary,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+});
+export default MyPurchasesScreen;

@@ -78,6 +78,15 @@ export class CompraController {
     }
   }
 
+  async marcarComoUtilizada(req, res, next) {
+    try {
+      const compra = await this.compraService.marcarComoUtilizada(req.params.compraId, req.usuario.id);
+      return res.status(200).json({ compra: serializarCompra(compra) });
+    } catch (error) {
+      return next(error);
+    }
+  }
+
   async calificarEvento(req, res, next) {
     try {
       const resenia = await this.compraService.calificarEvento(

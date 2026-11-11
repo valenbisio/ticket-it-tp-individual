@@ -139,6 +139,10 @@ router
   .route("/:usuarioId/compras/:compraId")
   .patch(autenticar, requerirRol("comprador"), (req, res, next) => compraController.cancelarCompra(req, res, next));
 
+router
+  .route("/compras/:compraId/uso")
+  .patch(autenticar, requerirRol("organizador"), (req, res, next) => compraController.marcarComoUtilizada(req, res, next));
+
 /**
  * @swagger
  * /api/usuarios/{usuarioId}/compras/{compraId}/resenias:

@@ -1,583 +1,567 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TextInput,
+  Pressable,
+} from 'react-native';
+import { useRouter } from 'expo-router';
 import { useApp } from '../contexts/AppContext.jsx';
+import { Header } from '../components/common/Header.jsx';
+import { api } from '../services/api.js';
+import { colors, spacing, borderRadius } from '../data/theme.js';
 
-const CATEGORIES = ['Recitales', 'Festivales', 'Teatro', 'Conferencias', 'Deportes'];
+const CATEGORIES = ['Música', 'Teatro'];
 
 export const CreateEventScreen = () => {
-  const { createEvent, navigateTo, showToast, goBack } = useApp();
+  const router = useRouter();
+  const { currentUser, loadEvents, showToast } = useApp();
 
-  // Tomorrow's date ISO
-  const tomorrowStr = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 1);
-    return d.toISOString().split('T')[0];
-  }, []);
-
-  const [name, setName] = useState('Sunset Sessions & Live Beats');
-  const [category, setCategory] = useState('Festivales');
-  const [description, setDescription] = useState(
-    'Una experiencia sensorial con los mejores exponentes del indie y synth-pop bajo el atardecer en el corazón de la ciudad. Gastronomía, visuales y acústica 360°.'
-  );
-  const [date, setDate] = useState(tomorrowStr);
-  const [doorTime, setDoorTime] = useState('17:00');
-  const [showTime, setShowTime] = useState('19:30');
-  const [venue, setVenue] = useState('Hipódromo de Palermo, CABA');
-  const [venueAddress, setVenueAddress] = useState('Av. del Libertador 4101, CABA');
+  const [name, setName] = useState('');
+  const [category, setCategory] = useState('Música');
+  const [description, setDescription] = useState('');
+  const [date, setDate] = useState(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().slice(0, 10);
+  });
+  const [showTime, setShowTime] = useState('21:00');
+  const [venue, setVenue] = useState('');
+  const [venueAddress, setVenueAddress] = useState('');
   const [imageUrl, setImageUrl] = useState(
-    'https://images.unsplash.com/photo-1506157786151-b8491531f063?auto=format&fit=crop&w=1200&q=80'
+    'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=1200&q=80'
   );
 
   // Dynamic Tiers
   const [tiers, setTiers] = useState([
-    {
-      id: 'tier-1',
-      name: 'Entrada General - Campo',
-      description: 'Acceso a campo general y sector gastronómico',
-      price: 15000,
-      totalQuota: 200,
-      soldCount: 0,
-    },
-    {
-      id: 'tier-2',
-      name: 'VIP Early Access',
-      description: 'Acceso prioritario y consumición de cortesía',
-      price: 25000,
-      totalQuota: 50,
-      soldCount: 0,
-    },
+    { id: 'tier-1', name: 'General', price: '15000', totalQuota: '100', description: 'Acceso campo' },
+    { id: 'tier-2', name: 'Platea VIP', price: '28000', totalQuota: '40', description: 'Ubicación preferencial' },
   ]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Add tier
-  const handleAddTier = () => {
-    const newTierId = `tier-${Date.now()}`;
-    setTiers((prev) => [
-      ...prev,
-      {
-        id: newTierId,
-        name: `Sector Especial #${prev.length + 1}`,
-        description: 'Ubicación preferencial',
-        price: 18000,
-        totalQuota: 100,
-        soldCount: 0,
-      },
-    ]);
-  };
-
-  // Remove tier
-  const handleRemoveTier = (tierId) => {
-    if (tiers.length === 1) {
-      showToast('Se requiere al menos 1 tipo de entrada', 'error');
-      return;
-    }
-    setTiers((prev) => prev.filter((t) => t.id !== tierId));
-  };
-
-  // Update tier field
-  const handleUpdateTier = (tierId, field, value) => {
-    setTiers((prev) =>
-      prev.map((t) => (t.id === tierId ? { ...t, [field]: value } : t))
-    );
-  };
-
-  // Calculations
-  const totalCapacity = tiers.reduce((sum, t) => sum + (Number(t.totalQuota) || 0), 0);
-  const totalPotentialRevenue = tiers.reduce(
-    (sum, t) => sum + (Number(t.price) || 0) * (Number(t.totalQuota) || 0),
+  // Calculated totals
+  const totalCapacity = tiers.reduce((acc, t) => acc + (parseInt(t.totalQuota, 10) || 0), 0);
+  const potentialRevenue = tiers.reduce(
+    (acc, t) => acc + (parseInt(t.price, 10) || 0) * (parseInt(t.totalQuota, 10) || 0),
     0
   );
 
-  // Live Validations
-  const ruleMinTiers = tiers.length >= 1;
-  const rulePositiveValues =
-    tiers.length > 0 &&
-    tiers.every((t) => Number(t.price) > 0 && Number(t.totalQuota) > 0);
-  const ruleFutureDate = !!date && new Date(date) >= new Date(tomorrowStr);
-  const ruleValidName = name.trim().length > 3;
+  const addTier = () => {
+    const nextId = `tier-${Date.now()}`;
+    setTiers((prev) => [
+      ...prev,
+      { id: nextId, name: '', price: '', totalQuota: '', description: '' },
+    ]);
+  };
 
-  const isFormValid =
-    ruleMinTiers && rulePositiveValues && ruleFutureDate && ruleValidName;
+  const removeTier = (id) => {
+    if (tiers.length <= 1) {
+      showToast('Debes tener al menos un tipo de entrada', 'warning');
+      return;
+    }
+    setTiers((prev) => prev.filter((t) => t.id !== id));
+  };
 
-  const handlePublish = (e) => {
-    e.preventDefault();
+  const updateTier = (id, field, value) => {
+    setTiers((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, [field]: value } : t))
+    );
+  };
 
-    if (!isFormValid) {
-      showToast('Por favor verifica los requisitos antes de publicar', 'error');
+  const handlePublish = async () => {
+    // Validations
+    if (!name.trim()) {
+      showToast('Ingresa el nombre del evento', 'warning');
+      return;
+    }
+    if (!venue.trim()) {
+      showToast('Ingresa el recinto o lugar del evento', 'warning');
+      return;
+    }
+    if (!description.trim()) {
+      showToast('Ingresa una breve descripción', 'warning');
       return;
     }
 
-    setIsSubmitting(true);
+    const invalidTier = tiers.find(
+      (t) => !t.name.trim() || !(parseInt(t.price, 10) > 0) || !(parseInt(t.totalQuota, 10) > 0)
+    );
+    if (invalidTier) {
+      showToast('Revisa los tipos de entrada: nombre, precio y cupo son obligatorios', 'warning');
+      return;
+    }
 
-    setTimeout(() => {
-      // Format display date
-      const parts = date.split('-');
-      const dObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-      const displayDateStr = dObj.toLocaleDateString('es-AR', {
-        weekday: 'short',
-        day: 'numeric',
-        month: 'short',
-        year: 'numeric',
-      });
-
-      createEvent({
+    try {
+      setIsSubmitting(true);
+      const newEventData = {
         name: name.trim(),
         category,
         description: description.trim(),
         date,
-        displayDate: displayDateStr,
-        doorTime,
+        displayDate: date,
         showTime,
         venue: venue.trim(),
-        venueAddress: venueAddress.trim(),
-        imageUrl:
-          imageUrl ||
-          'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=1200&q=80',
+        venueAddress: venueAddress.trim() || 'CABA',
+        imageUrl: imageUrl.trim(),
+        organizerId: currentUser.id,
+        organizerName: currentUser.name,
         tiers: tiers.map((t) => ({
-          ...t,
-          price: Number(t.price),
-          totalQuota: Number(t.totalQuota),
+          id: t.id,
+          name: t.name.trim(),
+          description: t.description?.trim() || t.name.trim(),
+          price: parseInt(t.price, 10),
+          totalQuota: parseInt(t.totalQuota, 10),
           soldCount: 0,
         })),
-      });
+      };
 
+      await api.createEvent(newEventData);
+      await loadEvents();
+      showToast('¡Evento publicado con éxito en el catálogo!', 'success');
+      router.replace('/(organizer)/events');
+    } catch {
+      showToast('Error al publicar el evento', 'error');
+    } finally {
       setIsSubmitting(false);
-      navigateTo('organizer_events');
-    }, 700);
-  };
-
-  const handleSaveDraft = () => {
-    showToast('Borrador guardado localmente en memoria', 'info');
+    }
   };
 
   return (
-    <div className="flex-1 flex flex-col w-full pb-36 pt-2 px-4 space-y-5">
-      {/* Dynamic Glow Ambient Banner */}
-      <div className="relative w-full overflow-hidden rounded-2xl bg-surface-container-low p-4 shadow-md border border-surface-container-high/60">
-        <div className="absolute -top-10 -right-10 w-36 h-36 rounded-full bg-primary/10 blur-2xl pointer-events-none" />
-        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider mb-1">
-          <span className="material-symbols-outlined text-[13px]">bolt</span>
-          Consola de Producción
-        </div>
-        <h2 className="font-headline font-bold text-lg text-on-surface">
-          Crear Nuevo Evento
-        </h2>
-        <p className="text-xs text-on-surface-variant mt-0.5 leading-relaxed">
-          Publica tu show, configura tipos de entrada y cupos en tiempo real con auditoría de aforo instantánea.
-        </p>
-      </div>
+    <View style={styles.screen}>
+      <Header title="Crear Evento" showBack onBack={() => router.back()} />
 
-      <form onSubmit={handlePublish} className="flex flex-col gap-5">
-        {/* SECTION 1: DATOS GENERALES */}
-        <section className="flex flex-col gap-3.5 bg-surface-container-low rounded-2xl p-4 shadow-sm border border-surface-container-high/50">
-          <div className="flex items-center justify-between pb-1 border-b border-surface-container-high/40">
-            <div className="flex items-center gap-2">
-              <span className="w-7 h-7 rounded-lg bg-surface-container-high flex items-center justify-center text-primary">
-                <span className="material-symbols-outlined text-[16px]">
-                  edit_note
-                </span>
-              </span>
-              <h3 className="font-headline font-bold text-xs sm:text-sm text-on-surface">
-                1. Datos Generales
-              </h3>
-            </div>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant font-medium">
-              Requerido
-            </span>
-          </div>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Intro */}
+        <View style={styles.introCard}>
+          <Text style={styles.introTitle}>Nuevo Espectáculo en Vivo</Text>
+          <Text style={styles.introSubtitle}>
+            Configura los datos del evento, tipos de entrada y cupos disponibles para venta inmediata.
+          </Text>
+        </View>
 
-          {/* Event Name */}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-on-surface-variant">
-              Nombre del Evento *
-            </label>
-            <input
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Ej. Sunset Sessions & Live Beats"
-              className="w-full h-11 px-3 bg-surface-container rounded-xl text-xs text-on-surface outline-none border border-surface-container-high focus:border-primary/50 transition-colors"
-            />
-          </div>
+        {/* Section 1: General Info */}
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionHeader}>1. Datos Generales</Text>
 
-          {/* Category Chips */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-on-surface-variant">
-              Categoría
-            </label>
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-              {CATEGORIES.map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setCategory(cat)}
-                  className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 ${
-                    category === cat
-                      ? 'bg-primary text-on-primary shadow-sm'
-                      : 'bg-surface-container-high text-on-surface-variant hover:text-on-surface'
-                  }`}
+          <Text style={styles.inputLabel}>Nombre del Evento *</Text>
+          <TextInput
+            placeholder="Ej: Festival Primavera 2025"
+            placeholderTextColor={colors.outline}
+            value={name}
+            onChangeText={setName}
+            style={styles.textInput}
+          />
+
+          <Text style={styles.inputLabel}>Categoría</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryRow}>
+            {CATEGORIES.map((cat) => (
+              <Pressable
+                key={cat}
+                onPress={() => setCategory(cat)}
+                style={[styles.categoryPill, category === cat && styles.activeCategoryPill]}
+              >
+                <Text
+                  style={[
+                    styles.categoryPillText,
+                    category === cat && styles.activeCategoryPillText,
+                  ]}
                 >
                   {cat}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Description */}
-          <div className="flex flex-col gap-1">
-            <div className="flex items-center justify-between text-xs">
-              <label className="font-semibold text-on-surface-variant">
-                Descripción
-              </label>
-              <span className="text-[10px] text-outline">
-                {description.length}/500
-              </span>
-            </div>
-            <textarea
-              rows={3}
-              value={description}
-              maxLength={500}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe la experiencia, normas de ingreso y beneficios..."
-              className="w-full p-2.5 bg-surface-container rounded-xl text-xs text-on-surface outline-none border border-surface-container-high focus:border-primary/50 transition-colors resize-none leading-relaxed"
-            />
-          </div>
-
-          {/* Date & Times Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-semibold text-on-surface-variant">
-                Fecha del Evento *
-              </label>
-              <input
-                type="date"
-                required
-                min={tomorrowStr}
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full h-11 px-3 bg-surface-container rounded-xl text-xs text-on-surface outline-none border border-surface-container-high"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-on-surface-variant">
-                  Apertura
-                </label>
-                <input
-                  type="time"
-                  value={doorTime}
-                  onChange={(e) => setDoorTime(e.target.value)}
-                  className="w-full h-11 px-2.5 bg-surface-container rounded-xl text-xs text-on-surface outline-none border border-surface-container-high text-center"
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-on-surface-variant">
-                  Inicio Show
-                </label>
-                <input
-                  type="time"
-                  value={showTime}
-                  onChange={(e) => setShowTime(e.target.value)}
-                  className="w-full h-11 px-2.5 bg-surface-container rounded-xl text-xs text-on-surface outline-none border border-surface-container-high text-center"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Venue */}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-on-surface-variant">
-              Lugar / Predio *
-            </label>
-            <input
-              type="text"
-              required
-              value={venue}
-              onChange={(e) => setVenue(e.target.value)}
-              placeholder="Ej. Hipódromo de Palermo, CABA"
-              className="w-full h-11 px-3 bg-surface-container rounded-xl text-xs text-on-surface outline-none border border-surface-container-high"
-            />
-          </div>
-
-          {/* Venue Address */}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-on-surface-variant">
-              Dirección exacta
-            </label>
-            <input
-              type="text"
-              value={venueAddress}
-              onChange={(e) => setVenueAddress(e.target.value)}
-              placeholder="Av. del Libertador 4101"
-              className="w-full h-11 px-3 bg-surface-container rounded-xl text-xs text-on-surface outline-none border border-surface-container-high"
-            />
-          </div>
-
-          {/* Flyer Preview */}
-          <div className="flex flex-col gap-1.5 pt-1">
-            <label className="text-xs font-semibold text-on-surface-variant">
-              Portada Promocional
-            </label>
-            <div className="relative w-full h-28 rounded-xl overflow-hidden bg-surface-container border border-surface-container-high">
-              <img
-                src={imageUrl}
-                alt="Portada"
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-surface-container-lowest/80 via-transparent to-transparent flex items-end p-2.5 justify-between">
-                <span className="text-[11px] text-on-surface font-semibold truncate max-w-[200px]">
-                  sunset_keyart_2025.webp
-                </span>
-                <span className="text-[10px] text-tertiary bg-surface/80 px-2 py-0.5 rounded-full font-bold">
-                  Listo
-                </span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* SECTION 2: DYNAMIC TICKET TIERS */}
-        <section className="flex flex-col gap-3.5 bg-surface-container-low rounded-2xl p-4 shadow-sm border border-surface-container-high/50">
-          <div className="flex items-center justify-between pb-1 border-b border-surface-container-high/40">
-            <div className="flex items-center gap-2">
-              <span className="w-7 h-7 rounded-lg bg-surface-container-high flex items-center justify-center text-tertiary">
-                <span className="material-symbols-outlined text-[16px]">
-                  confirmation_number
-                </span>
-              </span>
-              <h3 className="font-headline font-bold text-xs sm:text-sm text-on-surface">
-                2. Tipos de Entrada
-              </h3>
-            </div>
-            <span className="text-[10px] text-tertiary font-bold bg-tertiary/10 px-2 py-0.5 rounded-full">
-              ({tiers.length} configurados)
-            </span>
-          </div>
-
-          <p className="text-[11px] text-on-surface-variant">
-            Configura los sectores para venta directa. Los cupos descontarán aforo automáticamente.
-          </p>
-
-          {/* Tiers List */}
-          <div className="flex flex-col gap-3">
-            {tiers.map((tier, index) => (
-              <div
-                key={tier.id}
-                className="p-3.5 rounded-2xl bg-surface-container flex flex-col gap-3 border border-surface-container-high/60 shadow-sm"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-md bg-primary/15 text-primary flex items-center justify-center text-[10px] font-bold">
-                      #{index + 1}
-                    </span>
-                    <span className="text-xs font-bold text-on-surface">
-                      Sector {index + 1}
-                    </span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveTier(tier.id)}
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-outline hover:text-error hover:bg-error-container/20 transition-colors"
-                    title="Eliminar este tipo de entrada"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">
-                      delete
-                    </span>
-                  </button>
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">
-                    Nombre del tipo
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={tier.name}
-                    onChange={(e) =>
-                      handleUpdateTier(tier.id, 'name', e.target.value)
-                    }
-                    placeholder="Ej. Campo General"
-                    className="w-full h-10 px-3 bg-surface-container-high rounded-lg text-xs text-on-surface outline-none"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">
-                      Precio ($ ARS)
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      min={1}
-                      value={tier.price}
-                      onChange={(e) =>
-                        handleUpdateTier(tier.id, 'price', e.target.value)
-                      }
-                      className="w-full h-10 px-3 bg-surface-container-high rounded-lg text-xs text-on-surface outline-none"
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">
-                      Cupo total
-                    </label>
-                    <input
-                      type="number"
-                      required
-                      min={1}
-                      value={tier.totalQuota}
-                      onChange={(e) =>
-                        handleUpdateTier(tier.id, 'totalQuota', e.target.value)
-                      }
-                      className="w-full h-10 px-3 bg-surface-container-high rounded-lg text-xs text-on-surface outline-none"
-                    />
-                  </div>
-                </div>
-              </div>
+                </Text>
+              </Pressable>
             ))}
-          </div>
+          </ScrollView>
 
-          <button
-            type="button"
-            onClick={handleAddTier}
-            className="w-full h-11 rounded-xl bg-surface-container hover:bg-surface-container-high text-primary text-xs font-bold flex items-center justify-center gap-1.5 transition-colors active:scale-95 border border-primary/20"
-          >
-            <span className="material-symbols-outlined text-[18px]">
-              add_circle
-            </span>
-            <span>+ Agregar Tipo de Entrada</span>
-          </button>
-        </section>
+          <Text style={styles.inputLabel}>Descripción del Evento *</Text>
+          <TextInput
+            placeholder="Describe la propuesta musical, artística o temática..."
+            placeholderTextColor={colors.outline}
+            value={description}
+            onChangeText={setDescription}
+            multiline
+            numberOfLines={3}
+            style={[styles.textInput, styles.textArea]}
+          />
 
-        {/* SECTION 3: BALANCE PROYECTADO Y AFORO */}
-        <section className="flex flex-col gap-2.5 bg-gradient-to-br from-surface-container-high via-surface-container-low to-surface-container-lowest p-4 rounded-2xl shadow-lg border border-surface-container-high/60 relative overflow-hidden">
-          <div className="flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-tertiary animate-pulse" />
-              <h4 className="font-bold text-on-surface">Balance Proyectado</h4>
-            </div>
-            <span className="text-[10px] text-tertiary font-bold uppercase tracking-wider">
-              Cálculo Live
-            </span>
-          </div>
+          <View style={styles.rowTwo}>
+            <View style={styles.halfCol}>
+              <Text style={styles.inputLabel}>Fecha (AAAA-MM-DD)</Text>
+              <TextInput
+                placeholder="2025-11-20"
+                placeholderTextColor={colors.outline}
+                value={date}
+                onChangeText={setDate}
+                style={styles.textInput}
+              />
+            </View>
+            <View style={styles.halfCol}>
+              <Text style={styles.inputLabel}>Hora de Inicio</Text>
+              <TextInput
+                placeholder="21:00 hs"
+                placeholderTextColor={colors.outline}
+                value={showTime}
+                onChangeText={setShowTime}
+                style={styles.textInput}
+              />
+            </View>
+          </View>
 
-          <div className="grid grid-cols-2 gap-2 mt-1">
-            <div className="bg-surface-container/80 p-3 rounded-xl flex flex-col gap-0.5 border border-surface-container-high/40">
-              <span className="text-[10px] text-on-surface-variant">
-                Aforo Total
-              </span>
-              <span className="font-headline font-extrabold text-base text-on-surface">
-                {totalCapacity}{' '}
-                <span className="text-[10px] text-on-surface-variant font-normal">
-                  pers.
-                </span>
-              </span>
-            </div>
+          <Text style={styles.inputLabel}>Lugar / Recinto *</Text>
+          <TextInput
+            placeholder="Ej: Estadio Movistar Arena / Niceto Club"
+            placeholderTextColor={colors.outline}
+            value={venue}
+            onChangeText={setVenue}
+            style={styles.textInput}
+          />
 
-            <div className="bg-surface-container/80 p-3 rounded-xl flex flex-col gap-0.5 border border-surface-container-high/40">
-              <span className="text-[10px] text-on-surface-variant">
-                Recaudación Máx
-              </span>
-              <span className="font-headline font-extrabold text-base text-tertiary truncate">
-                ${totalPotentialRevenue.toLocaleString('es-AR')}
-              </span>
-            </div>
-          </div>
-        </section>
+          <Text style={styles.inputLabel}>Dirección</Text>
+          <TextInput
+            placeholder="Ej: Humboldt 450, Villa Crespo, CABA"
+            placeholderTextColor={colors.outline}
+            value={venueAddress}
+            onChangeText={setVenueAddress}
+            style={styles.textInput}
+          />
 
-        {/* SECTION 4: VALIDATION STATUS CHECKLIST */}
-        <section className="flex flex-col gap-2 bg-surface-container-lowest/60 p-3.5 rounded-2xl border border-surface-container-high/40 text-xs">
-          <span className="text-[10px] text-outline uppercase font-bold tracking-wider">
-            Requisitos de Publicación
-          </span>
-          <div className="flex flex-col gap-1.5">
-            <div
-              className={`flex items-center gap-2 px-2.5 py-1 rounded-lg ${
-                ruleMinTiers
-                  ? 'text-tertiary bg-tertiary/10'
-                  : 'text-error bg-error-container/20'
-              }`}
+          <Text style={styles.inputLabel}>URL de Imagen de Portada</Text>
+          <TextInput
+            placeholder="https://..."
+            placeholderTextColor={colors.outline}
+            value={imageUrl}
+            onChangeText={setImageUrl}
+            style={styles.textInput}
+          />
+        </View>
+
+        {/* Section 2: Dynamic Tiers */}
+        <View style={styles.sectionCard}>
+          <View style={styles.tierSectionHeaderRow}>
+            <View>
+              <Text style={styles.sectionHeader}>2. Tipos de Entrada y Cupos</Text>
+              <Text style={styles.sectionSub}>Define precios, descripciones y disponibilidad</Text>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Agregar tipo de entrada"
+              onPress={addTier}
+              style={styles.addTierBtn}
             >
-              <span className="material-symbols-outlined text-[15px]">
-                {ruleMinTiers ? 'check_circle' : 'cancel'}
-              </span>
-              <span>Al menos 1 tipo de entrada configurado</span>
-            </div>
+              <Text style={styles.addTierText}>＋ Agregar Tipo</Text>
+            </Pressable>
+          </View>
 
-            <div
-              className={`flex items-center gap-2 px-2.5 py-1 rounded-lg ${
-                rulePositiveValues
-                  ? 'text-tertiary bg-tertiary/10'
-                  : 'text-error bg-error-container/20'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[15px]">
-                {rulePositiveValues ? 'check_circle' : 'cancel'}
-              </span>
-              <span>Precios y cupos mayores a 0</span>
-            </div>
+          <View style={styles.tiersList}>
+            {tiers.map((tier, index) => (
+              <View key={tier.id} style={styles.tierFormCard}>
+                <View style={styles.tierCardHeader}>
+                  <Text style={styles.tierIndexBadge}>#{index + 1}</Text>
+                  {tiers.length > 1 && (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel="Eliminar este tipo de entrada"
+                      onPress={() => removeTier(tier.id)}
+                      style={styles.deleteTierBtn}
+                    >
+                      <Text style={styles.deleteTierText}>Eliminar ✕</Text>
+                    </Pressable>
+                  )}
+                </View>
 
-            <div
-              className={`flex items-center gap-2 px-2.5 py-1 rounded-lg ${
-                ruleFutureDate
-                  ? 'text-tertiary bg-tertiary/10'
-                  : 'text-error bg-error-container/20'
-              }`}
-            >
-              <span className="material-symbols-outlined text-[15px]">
-                {ruleFutureDate ? 'check_circle' : 'cancel'}
-              </span>
-              <span>Fecha futura validada</span>
-            </div>
-          </div>
-        </section>
+                <Text style={styles.inputLabelSmall}>Nombre del Tipo (Ej: General, VIP, Platea) *</Text>
+                <TextInput
+                  placeholder="Nombre de la entrada"
+                  placeholderTextColor={colors.outline}
+                  value={tier.name}
+                  onChangeText={(val) => updateTier(tier.id, 'name', val)}
+                  style={styles.textInputSmall}
+                />
 
-        {/* FIXED BOTTOM ACTION DECK */}
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-surface-container-lowest/95 backdrop-blur-xl p-4 pb-safe border-t border-surface-container-high/60 shadow-2xl">
-          <div className="flex items-center gap-2.5 max-w-lg mx-auto w-full">
-            <button
-              type="button"
-              onClick={handleSaveDraft}
-              className="h-12 px-4 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-xs font-semibold flex items-center justify-center gap-1.5 active:scale-95 transition-all shrink-0"
-            >
-              <span className="material-symbols-outlined text-[17px]">save</span>
-              <span>Borrador</span>
-            </button>
+                <View style={styles.rowTwo}>
+                  <View style={styles.halfCol}>
+                    <Text style={styles.inputLabelSmall}>Precio ($) *</Text>
+                    <TextInput
+                      placeholder="18000"
+                      placeholderTextColor={colors.outline}
+                      keyboardType="numeric"
+                      value={tier.price}
+                      onChangeText={(val) => updateTier(tier.id, 'price', val)}
+                      style={styles.textInputSmall}
+                    />
+                  </View>
+                  <View style={styles.halfCol}>
+                    <Text style={styles.inputLabelSmall}>Cupo Total *</Text>
+                    <TextInput
+                      placeholder="100"
+                      placeholderTextColor={colors.outline}
+                      keyboardType="numeric"
+                      value={tier.totalQuota}
+                      onChangeText={(val) => updateTier(tier.id, 'totalQuota', val)}
+                      style={styles.textInputSmall}
+                    />
+                  </View>
+                </View>
 
-            <button
-              type="submit"
-              disabled={!isFormValid || isSubmitting}
-              className={`h-12 flex-1 rounded-xl font-headline font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg transition-all active:scale-[0.98] ${
-                !isFormValid || isSubmitting
-                  ? 'bg-surface-container-high text-on-surface-variant/40 cursor-not-allowed'
-                  : 'bg-primary hover:bg-primary-container text-on-primary shadow-primary/25'
-              }`}
-            >
-              {isSubmitting ? (
-                <>
-                  <span className="material-symbols-outlined text-[18px] animate-spin">
-                    refresh
-                  </span>
-                  <span>Publicando...</span>
-                </>
-              ) : (
-                <>
-                  <span className="material-symbols-outlined text-[18px]">
-                    rocket_launch
-                  </span>
-                  <span>Publicar Evento</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </form>
-    </div>
+                <Text style={styles.inputLabelSmall}>Beneficios o Descripción</Text>
+                <TextInput
+                  placeholder="Ej: Acceso preferencial Puerta 2"
+                  placeholderTextColor={colors.outline}
+                  value={tier.description}
+                  onChangeText={(val) => updateTier(tier.id, 'description', val)}
+                  style={styles.textInputSmall}
+                />
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* Section 3: Summary Projection */}
+        <View style={styles.projectionCard}>
+          <Text style={styles.projTitle}>Proyección Financiera y Aforo</Text>
+          <View style={styles.projRow}>
+            <View style={styles.projCol}>
+              <Text style={styles.projLbl}>Aforo Total</Text>
+              <Text style={styles.projVal}>{totalCapacity} entradas</Text>
+            </View>
+            <View style={styles.projCol}>
+              <Text style={styles.projLbl}>Recaudación Potencial</Text>
+              <Text style={styles.projValPrice}>${potentialRevenue.toLocaleString('es-AR')}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Publish Action Button */}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Publicar evento en catálogo"
+          disabled={isSubmitting}
+          onPress={handlePublish}
+          style={({ pressed }) => [
+            styles.publishButton,
+            isSubmitting && styles.publishButtonDisabled,
+            pressed && styles.btnPressed,
+          ]}
+        >
+          <Text style={styles.publishButtonText}>
+            {isSubmitting ? 'Publicando...' : 'Publicar Evento en Catálogo'}
+          </Text>
+        </Pressable>
+      </ScrollView>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: colors.surface,
+  },
+  scrollContent: {
+    padding: spacing.md,
+    gap: spacing.md,
+    paddingBottom: 40,
+  },
+  introCard: {
+    backgroundColor: colors.surfaceContainerLow,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.surfaceContainerHigh,
+  },
+  introTitle: {
+    color: colors.onSurface,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  introSubtitle: {
+    color: colors.onSurfaceVariant,
+    fontSize: 12,
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  sectionCard: {
+    backgroundColor: colors.surfaceContainerHigh,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.surfaceContainerHighest,
+  },
+  sectionHeader: {
+    color: colors.onSurface,
+    fontSize: 15,
+    fontWeight: '800',
+    marginBottom: spacing.xs,
+  },
+  sectionSub: {
+    color: colors.onSurfaceVariant,
+    fontSize: 11,
+  },
+  inputLabel: {
+    color: colors.onSurface,
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: spacing.sm,
+    marginBottom: 4,
+  },
+  inputLabelSmall: {
+    color: colors.outline,
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 6,
+    marginBottom: 2,
+  },
+  textInput: {
+    backgroundColor: colors.surfaceContainerLow,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: colors.onSurface,
+    fontSize: 13,
+  },
+  textArea: {
+    minHeight: 70,
+    textAlignVertical: 'top',
+  },
+  textInputSmall: {
+    backgroundColor: colors.surfaceContainerLowest,
+    borderRadius: borderRadius.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    color: colors.onSurface,
+    fontSize: 12,
+  },
+  categoryRow: {
+    flexDirection: 'row',
+    marginVertical: 4,
+  },
+  categoryPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.surfaceContainerLow,
+    marginRight: 6,
+  },
+  activeCategoryPill: {
+    backgroundColor: colors.tertiaryContainer,
+  },
+  categoryPillText: {
+    color: colors.onSurfaceVariant,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  activeCategoryPillText: {
+    color: colors.onTertiary,
+  },
+  rowTwo: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  halfCol: {
+    flex: 1,
+  },
+  tierSectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  addTierBtn: {
+    backgroundColor: colors.tertiaryContainer,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: borderRadius.md,
+  },
+  addTierText: {
+    color: colors.onTertiary,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  tiersList: {
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  tierFormCard: {
+    backgroundColor: colors.surfaceContainerLow,
+    borderRadius: borderRadius.md,
+    padding: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.surfaceContainerHighest,
+  },
+  tierCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  tierIndexBadge: {
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  deleteTierBtn: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  deleteTierText: {
+    color: colors.error,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  projectionCard: {
+    backgroundColor: colors.surfaceContainerLow,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.surfaceContainerHigh,
+  },
+  projTitle: {
+    color: colors.outline,
+    fontSize: 11,
+    textTransform: 'uppercase',
+    fontWeight: '700',
+  },
+  projRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: spacing.xs,
+  },
+  projCol: {
+    alignItems: 'flex-start',
+  },
+  projLbl: {
+    color: colors.onSurfaceVariant,
+    fontSize: 11,
+  },
+  projVal: {
+    color: colors.onSurface,
+    fontSize: 15,
+    fontWeight: '800',
+    marginTop: 2,
+  },
+  projValPrice: {
+    color: colors.tertiary,
+    fontSize: 16,
+    fontWeight: '800',
+    marginTop: 2,
+  },
+  publishButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: 14,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+  },
+  publishButtonDisabled: {
+    opacity: 0.6,
+  },
+  publishButtonText: {
+    color: colors.onPrimary,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  btnPressed: {
+    opacity: 0.85,
+  },
+});
+export default CreateEventScreen;

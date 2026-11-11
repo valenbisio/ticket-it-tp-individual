@@ -134,6 +134,19 @@ export class CompraService {
     return compra;
   }
 
+  async marcarComoUtilizada(compraId, organizadorId) {
+    const compra = await this.compraRepository.obtenerPorId(compraId);
+    if (!compra) throw new NotFoundError(`Compra no encontrada: ${compraId}`);
+    if (compra.evento?.organizador?.id !== organizadorId) {
+      throw new ForbiddenError("Solo el organizador del evento puede validar la entrada");
+    }
+    if (compra.estado !== EstadoCompra.CONFIRMADA) {
+      throw new ConflictError("Solo se pueden validar compras confirmadas");
+    }
+    compra.actualizarEstado(EstadoCompra.UTILIZADA);
+    return compra;
+  }
+
   async calificarEvento(compraId, usuarioId, puntuacion, detalle) {
     const compra = await this.compraRepository.obtenerPorId(compraId);
     if (!compra) throw new NotFoundError(`Compra no encontrada: ${compraId}`);

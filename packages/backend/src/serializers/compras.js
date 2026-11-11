@@ -15,11 +15,22 @@ export function serializarCompra(compra, hoy = new Date()) {
       precio: compra.tipoEntrada?.precio ?? null,
     },
     evento: {
+      id: compra.evento?.id ?? null,
       nombre: compra.evento?.nombre ?? null,
       descripcion: compra.evento?.descripcion ?? null,
       fecha: compra.evento?.fecha ? compra.evento.fecha.toISOString() : null,
       categoria: compra.evento?.categoria?.nombre ?? null,
       multimedia: compra.evento?.multimedia ?? [],
+      organizadorId: compra.evento?.organizador?.id ?? null,
+      organizador: compra.evento?.organizador
+        ? `${compra.evento.organizador.nombre} ${compra.evento.organizador.apellido}`.trim()
+        : "",
+      lugar: compra.evento?.lugar ?? null,
+    },
+    comprador: {
+      id: compra.comprador?.id ?? null,
+      nombre: compra.comprador?.nombre ?? null,
+      apellido: compra.comprador?.apellido ?? null,
     },
     diasRestantesParaEvento: compra.diasRestantesParaEvento(hoy),
   };

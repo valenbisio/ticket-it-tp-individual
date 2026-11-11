@@ -106,7 +106,15 @@ export class EventoService {
       fecha: evento.fecha,
       portada: evento.multimedia[0] ?? null,
       organizador: `${evento.organizador.nombre} ${evento.organizador.apellido}`,
+      organizadorId: evento.organizador.id,
       precioDesde: precios.length > 0 ? Math.min(...precios) : null,
+      tiposEntrada: evento.tiposEntrada.map((tipo) => ({
+        nombre: tipo.nombre,
+        descripcion: tipo.descripcion,
+        precio: tipo.precio,
+        cupo: tipo.cupo,
+        cupoTotal: tipo.cupoTotal,
+      })),
       puntajeOrganizador,
       resenias: evento.resenias.map((resenia) => ({
         usuarioId: resenia.comprador?.id ?? null,

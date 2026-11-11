@@ -20,7 +20,7 @@ export const validarQuerySchema = (schema) => {
             const detalles = resultado.error.issues.map((i) => i.message).join(", ");
             return next(new BadRequestError(`Parámetros inválidos: ${detalles}`));
         }
-        req.query = resultado.data;
+        req.validatedQuery = resultado.data;
         next();
     };
 };

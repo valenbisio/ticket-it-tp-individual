@@ -1,526 +1,550 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  Image,
+} from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useApp } from '../contexts/AppContext.jsx';
+import { Header } from '../components/common/Header.jsx';
+import { StatusBadge } from '../components/common/StatusBadge.jsx';
+import { api } from '../services/api.js';
+import { colors, spacing, borderRadius } from '../data/theme.js';
 
 export const OrganizerEventDetailScreen = () => {
-  const {
-    events,
-    selectedEventId,
-    purchases,
-    markPurchaseAsUsed,
-    navigateTo,
-    showToast,
-  } = useApp();
+  const { id } = useLocalSearchParams(); // eventId
+  const router = useRouter();
+  const { events, markPurchaseUsed, showToast } = useApp();
 
-  const event = events.find((e) => e.id === selectedEventId) || events[0];
+  const event = useMemo(() => {
+    return events.find((e) => e.id === id) || events[0];
+  }, [events, id]);
 
-  const [activeStatusFilter, setActiveStatusFilter] = useState('all');
-  const [searchBuyerQuery, setSearchBuyerQuery] = useState('');
-  const [showQRScannerModal, setShowQRScannerModal] = useState(false);
-  const [scannedTicketId, setScannedTicketId] = useState('');
+  const [attendees, setAttendees] = useState([]);
+  const [filterStatus, setFilterStatus] = useState('todas');
+
+  const loadAttendees = async () => {
+    if (!event) return;
+    const list = await api.getEventPurchases(event.id);
+    setAttendees(list);
+  };
+
+  useEffect(() => {
+    loadAttendees();
+  }, [event]);
 
   if (!event) {
     return (
-      <div className="p-8 text-center text-on-surface">
-        Evento no encontrado
-      </div>
+      <View style={styles.center}>
+        <Text style={styles.notFound}>Evento no encontrado</Text>
+      </View>
     );
   }
 
-  // Purchases for this event
-  const eventPurchases = purchases.filter((p) => p.eventId === event.id);
+  // Calculate overall metrics
+  let totalSold = 0;
+  let totalQuota = 0;
+  let totalRevenue = 0;
+  event.tiers?.forEach((t) => {
+    totalSold += t.soldCount || 0;
+    totalQuota += t.totalQuota || 0;
+    totalRevenue += (t.soldCount || 0) * (t.price || 0);
+  });
+  const occupancyPercent = totalQuota > 0 ? Math.round((totalSold / totalQuota) * 100) : 0;
 
-  const filteredPurchases = eventPurchases.filter((p) => {
-    const matchesStatus =
-      activeStatusFilter === 'all' || p.status === activeStatusFilter;
-    const matchesSearch =
-      !searchBuyerQuery ||
-      p.buyerName.toLowerCase().includes(searchBuyerQuery.toLowerCase()) ||
-      p.id.toLowerCase().includes(searchBuyerQuery.toLowerCase());
-    return matchesStatus && matchesSearch;
+  // Filter attendees
+  const filteredAttendees = attendees.filter((a) => {
+    if (filterStatus === 'todas') return true;
+    return a.status === filterStatus;
   });
 
-  // Calculate totals
-  const totalSold = event.tiers.reduce((s, t) => s + t.soldCount, 0);
-  const totalCap = event.tiers.reduce((s, t) => s + t.totalQuota, 0);
-  const totalRev = event.tiers.reduce((s, t) => s + t.soldCount * t.price, 0);
-  const totalPct = totalCap > 0 ? Math.min(100, Math.round((totalSold / totalCap) * 100)) : 0;
-
-  const handleSimulateScan = () => {
-    const idToUse = scannedTicketId.trim().toUpperCase() || 'TK-8492';
-    const found = purchases.find((p) => p.id === idToUse && p.eventId === event.id);
-
-    if (!found) {
-      showToast(`No se encontró ticket #${idToUse} para este evento`, 'error');
-      return;
-    }
-
-    if (found.status === 'utilizada') {
-      showToast(`¡Alerta! Entrada #${idToUse} ya fue utilizada previamente`, 'info');
-      setShowQRScannerModal(false);
-      return;
-    }
-
-    markPurchaseAsUsed(found.id);
-    setShowQRScannerModal(false);
-    setScannedTicketId('');
+  const handleValidateEntry = async (purchaseId) => {
+    await markPurchaseUsed(purchaseId);
+    showToast(`Pase validado exitosamente en molinete`, 'success');
+    loadAttendees();
   };
 
   return (
-    <div className="flex-1 flex flex-col w-full pb-32 pt-2 px-4 space-y-4">
-      {/* Resumen Superior Event Hero Card */}
-      <section className="relative w-full rounded-2xl overflow-hidden bg-surface-container shadow-md flex flex-col border border-surface-container-high/60">
-        <div className="relative w-full h-36 bg-surface-container-highest overflow-hidden">
-          <img
-            src={event.imageUrl}
-            alt={event.name}
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-surface-container via-surface-container/60 to-transparent" />
+    <View style={styles.screen}>
+      <Header title="Gestión de Evento" showBack onBack={() => router.back()} />
 
-          {/* Pill Estado Flotante */}
-          <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-lowest/80 backdrop-blur-md">
-            <span className="w-2 h-2 rounded-full bg-tertiary animate-pulse" />
-            <span className="text-[10px] text-tertiary font-bold uppercase tracking-wider">
-              {event.status === 'active' ? 'Publicado • En Venta' : 'Finalizado'}
-            </span>
-          </div>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Event Header Hero */}
+        <View style={styles.heroCard}>
+          <Image source={{ uri: event.imageUrl }} style={styles.heroImage} />
+          <View style={styles.heroOverlay} />
+          <View style={styles.heroDetails}>
+            <Text style={styles.eventName}>{event.name}</Text>
+            <Text style={styles.eventDate}>📅 {event.displayDate || event.date}</Text>
+            <Text style={styles.eventVenue}>📍 {event.venue}</Text>
+          </View>
+        </View>
 
-          <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-surface-container-highest/80 backdrop-blur-md">
-            <span className="text-[10px] text-on-surface-variant font-medium">
-              {event.organizerName}
-            </span>
-          </div>
-        </div>
+        {/* Global Sales Summary (Dual Metric Grid) */}
+        <View style={styles.metricsRow}>
+          <View style={styles.metricCard}>
+            <Text style={styles.metricLabel}>Total Recaudado</Text>
+            <Text style={styles.metricValuePrice}>${totalRevenue.toLocaleString('es-AR')}</Text>
+            <Text style={styles.metricSub}>Facturación actual</Text>
+          </View>
+          <View style={styles.metricCard}>
+            <Text style={styles.metricLabel}>Ocupación / Aforo</Text>
+            <Text style={styles.metricValue}>
+              {occupancyPercent}% ({totalSold}/{totalQuota})
+            </Text>
+            <View style={styles.miniProgressBg}>
+              <View
+                style={[styles.miniProgressFill, { width: `${Math.min(occupancyPercent, 100)}%` }]}
+              />
+            </View>
+          </View>
+        </View>
 
-        {/* Info del Evento */}
-        <div className="p-4 flex flex-col gap-3 -mt-4 relative z-10">
-          <h2 className="font-headline font-bold text-lg text-on-surface">
-            {event.name}
-          </h2>
+        {/* Desglose por Tipo de Entrada (Tiers) */}
+        <View style={styles.sectionBlock}>
+          <Text style={styles.sectionHeading}>Desglose por Tipo de Entrada</Text>
+          <Text style={styles.sectionSub}>Cupos vendidos, disponibles y recaudación parcial</Text>
 
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-on-surface-variant">
-            <div className="flex items-center gap-1">
-              <span className="material-symbols-outlined text-[15px] text-primary">
-                calendar_month
-              </span>
-              <span>{event.displayDate}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="material-symbols-outlined text-[15px] text-tertiary">
-                location_on
-              </span>
-              <span className="truncate">{event.venue}</span>
-            </div>
-          </div>
-
-          {/* Métricas Clave en Grid */}
-          <div className="grid grid-cols-2 gap-2 pt-1">
-            <div className="bg-surface-container-low rounded-xl p-3 flex flex-col justify-between border border-surface-container-high/40">
-              <span className="text-[10px] uppercase tracking-wider text-on-surface-variant font-bold">
-                Recaudación Total
-              </span>
-              <span className="font-headline text-base font-bold text-on-surface tracking-tight mt-1 truncate">
-                ${totalRev.toLocaleString('es-AR')}{' '}
-                <span className="text-[10px] text-on-surface-variant font-normal">
-                  ARS
-                </span>
-              </span>
-              <span className="text-[10px] text-emerald-400 mt-0.5">
-                +18% vs meta base
-              </span>
-            </div>
-
-            <div className="bg-surface-container-low rounded-xl p-3 flex flex-col justify-between border border-surface-container-high/40">
-              <span className="text-[10px] uppercase tracking-wider text-on-surface-variant font-bold">
-                Aforo Vendido
-              </span>
-              <span className="font-headline text-base font-bold text-on-surface tracking-tight mt-1">
-                {totalSold}{' '}
-                <span className="text-xs text-on-surface-variant font-normal">
-                  / {totalCap}
-                </span>
-              </span>
-              <div className="w-full bg-surface-variant rounded-full h-1.5 mt-1 overflow-hidden">
-                <div
-                  className="bg-primary h-1.5 rounded-full transition-all"
-                  style={{ width: `${totalPct}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Desglose Analítico de Cupos por Tipo de Entrada */}
-      <section className="flex flex-col space-y-2.5">
-        <div className="flex items-center justify-between text-xs">
-          <div className="flex items-center gap-1.5 font-bold text-on-surface">
-            <span className="material-symbols-outlined text-primary text-[18px]">
-              analytics
-            </span>
-            <h3 className="font-headline text-sm">Capacidad y Cupos</h3>
-          </div>
-          <span className="text-on-surface-variant">
-            {totalPct}% ocupación total
-          </span>
-        </div>
-
-        <div className="space-y-2.5">
-          {event.tiers.map((tier) => {
-            const available = Math.max(0, tier.totalQuota - tier.soldCount);
-            const tierPct =
-              tier.totalQuota > 0
-                ? Math.min(100, Math.round((tier.soldCount / tier.totalQuota) * 100))
-                : 0;
-            const isSoldOut = available === 0;
-
-            return (
-              <div
-                key={tier.id}
-                className="bg-surface-container rounded-2xl p-3.5 shadow-sm flex flex-col space-y-2 border border-surface-container-high/50"
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-headline font-bold text-xs sm:text-sm text-on-surface">
-                        {tier.name}
-                      </span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-surface-container-highest text-on-surface-variant font-mono">
-                        ${tier.price.toLocaleString('es-AR')} ARS
-                      </span>
-                    </div>
-                    {tier.description && (
-                      <p className="text-[11px] text-on-surface-variant mt-0.5 leading-relaxed">
-                        {tier.description}
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    {isSoldOut ? (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-error-container text-on-error-container font-bold">
-                        Agotado
-                      </span>
-                    ) : available <= 10 ? (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-400/15 text-amber-300 font-bold">
-                        Últimos cupos
-                      </span>
-                    ) : (
-                      <span className="text-xs text-primary font-bold">
-                        {tierPct}%
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Progress Bar */}
-                <div className="w-full bg-surface-container-highest h-2 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all duration-500 ${
-                      isSoldOut
-                        ? 'bg-secondary'
-                        : available <= 10
-                        ? 'bg-amber-400'
-                        : 'bg-primary-container'
-                    }`}
-                    style={{ width: `${tierPct}%` }}
-                  />
-                </div>
-
-                {/* Grid 3 métricas */}
-                <div className="grid grid-cols-3 gap-1 pt-1 text-center bg-surface-container-low rounded-xl py-1.5 border border-surface-container-high/40">
-                  <div>
-                    <span className="text-[10px] text-on-surface-variant block">
-                      Vendidas
-                    </span>
-                    <span className="font-bold text-xs text-on-surface">
-                      {tier.soldCount}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-on-surface-variant block">
-                      Disponibles
-                    </span>
-                    <span
-                      className={`font-bold text-xs ${
-                        isSoldOut ? 'text-error' : 'text-tertiary'
-                      }`}
-                    >
-                      {available}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-on-surface-variant block">
-                      Total
-                    </span>
-                    <span className="font-bold text-xs text-on-surface-variant">
-                      {tier.totalQuota}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Gestión y Lista de Compras de Asistentes */}
-      <section className="flex flex-col space-y-3 pt-2">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="font-headline font-bold text-sm sm:text-base text-on-surface">
-              Compras de Asistentes
-            </h3>
-            <p className="text-[11px] text-on-surface-variant">
-              {eventPurchases.length} órdenes registradas
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setShowQRScannerModal(true)}
-            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-primary text-on-primary text-xs font-bold active:scale-95 transition-all shadow-md"
-          >
-            <span className="material-symbols-outlined text-[16px]">
-              qr_code_scanner
-            </span>
-            <span>Check-in</span>
-          </button>
-        </div>
-
-        {/* Filter Status Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-4 px-4 no-scrollbar">
-          <button
-            type="button"
-            onClick={() => setActiveStatusFilter('all')}
-            className={`shrink-0 h-8 px-3 rounded-full text-xs font-semibold transition-all active:scale-95 ${
-              activeStatusFilter === 'all'
-                ? 'bg-primary text-on-primary'
-                : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
-            }`}
-          >
-            Todas ({eventPurchases.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveStatusFilter('confirmada')}
-            className={`shrink-0 h-8 px-3 rounded-full text-xs font-semibold transition-all active:scale-95 ${
-              activeStatusFilter === 'confirmada'
-                ? 'bg-primary text-on-primary'
-                : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
-            }`}
-          >
-            Confirmadas ({eventPurchases.filter((p) => p.status === 'confirmada').length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveStatusFilter('pendiente')}
-            className={`shrink-0 h-8 px-3 rounded-full text-xs font-semibold transition-all active:scale-95 ${
-              activeStatusFilter === 'pendiente'
-                ? 'bg-primary text-on-primary'
-                : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
-            }`}
-          >
-            Pendientes ({eventPurchases.filter((p) => p.status === 'pendiente').length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveStatusFilter('utilizada')}
-            className={`shrink-0 h-8 px-3 rounded-full text-xs font-semibold transition-all active:scale-95 ${
-              activeStatusFilter === 'utilizada'
-                ? 'bg-primary text-on-primary'
-                : 'bg-surface-container text-on-surface-variant hover:text-on-surface'
-            }`}
-          >
-            Utilizadas ({eventPurchases.filter((p) => p.status === 'utilizada').length})
-          </button>
-        </div>
-
-        {/* Lista de tarjetas de compras */}
-        <div className="space-y-3">
-          {filteredPurchases.length === 0 ? (
-            <div className="p-6 text-center text-xs text-on-surface-variant bg-surface-container rounded-2xl border border-surface-container-high/40">
-              No hay órdenes en esta categoría.
-            </div>
-          ) : (
-            filteredPurchases.map((purchase) => {
-              const isUsed = purchase.status === 'utilizada';
-              const isPending = purchase.status === 'pendiente';
+          <View style={styles.tiersContainer}>
+            {event.tiers?.map((tier) => {
+              const remaining = tier.totalQuota - tier.soldCount;
+              const tierRevenue = tier.soldCount * tier.price;
+              const tierPercent =
+                tier.totalQuota > 0 ? Math.round((tier.soldCount / tier.totalQuota) * 100) : 0;
 
               return (
-                <article
-                  key={purchase.id}
-                  className="bg-surface-container rounded-2xl p-4 shadow-sm space-y-3 border border-surface-container-high/50"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 rounded-full overflow-hidden bg-surface-container-highest flex items-center justify-center shrink-0 text-primary font-bold text-xs border border-outline-variant/30">
-                        {purchase.buyerAvatar ? (
-                          <img
-                            src={purchase.buyerAvatar}
-                            alt={purchase.buyerName}
-                            referrerPolicy="no-referrer"
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          purchase.buyerName.slice(0, 2).toUpperCase()
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <h4 className="font-headline font-bold text-xs sm:text-sm text-on-surface truncate">
-                            {purchase.buyerName}
-                          </h4>
-                          <span className="text-[10px] text-on-surface-variant font-mono">
-                            #{purchase.id}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-on-surface-variant truncate">
-                          {purchase.quantity}x {purchase.tierName} • ${purchase.totalPrice.toLocaleString('es-AR')} ARS
-                        </p>
-                      </div>
-                    </div>
+                <View key={tier.id} style={styles.tierDetailCard}>
+                  <View style={styles.tierTop}>
+                    <Text style={styles.tierName}>{tier.name}</Text>
+                    <Text style={styles.tierPrice}>${tier.price.toLocaleString('es-AR')}</Text>
+                  </View>
 
-                    {/* Status Badge */}
-                    <span
-                      className={`shrink-0 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                        isUsed
-                          ? 'bg-surface-variant text-on-surface-variant'
-                          : isPending
-                          ? 'bg-amber-400/15 text-amber-300'
-                          : 'bg-emerald-500/15 text-emerald-400'
-                      }`}
-                    >
-                      {isUsed
-                        ? 'Utilizada'
-                        : isPending
-                        ? 'Pendiente'
-                        : 'Confirmada'}
-                    </span>
-                  </div>
+                  <View style={styles.tierProgressBg}>
+                    <View
+                      style={[
+                        styles.tierProgressFill,
+                        { width: `${Math.min(tierPercent, 100)}%` },
+                      ]}
+                    />
+                  </View>
 
-                  {/* Checked-in detail if used */}
-                  {isUsed && (
-                    <div className="flex items-center gap-1 text-[11px] text-on-surface-variant pt-1 border-t border-surface-container-high/40">
-                      <span className="material-symbols-outlined text-[14px] text-tertiary">
-                        check_circle
-                      </span>
-                      <span>
-                        {purchase.checkedInAt || 'Ingreso registrado en molinete'}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Actions for this purchase */}
-                  <div className="flex items-center gap-2 pt-1">
-                    {/* Open direct chat with this buyer */}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        navigateTo('purchase_chat', { purchaseId: purchase.id })
-                      }
-                      className="flex-1 h-9 rounded-xl bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors active:scale-95"
-                    >
-                      <span className="material-symbols-outlined text-[16px] text-tertiary">
-                        chat
-                      </span>
-                      <span>Chat</span>
-                    </button>
-
-                    {/* Check-in / mark as used button if confirmed */}
-                    {!isUsed && purchase.status === 'confirmada' && (
-                      <button
-                        type="button"
-                        onClick={() => markPurchaseAsUsed(purchase.id)}
-                        className="flex-1 h-9 rounded-xl bg-primary hover:bg-primary-container text-on-primary text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-sm"
-                      >
-                        <span className="material-symbols-outlined text-[16px]">
-                          how_to_reg
-                        </span>
-                        <span>Check-in</span>
-                      </button>
-                    )}
-                  </div>
-                </article>
+                  <View style={styles.tierStatsGrid}>
+                    <View style={styles.tierStatCol}>
+                      <Text style={styles.statLbl}>Vendidas</Text>
+                      <Text style={styles.statVal}>{tier.soldCount}</Text>
+                    </View>
+                    <View style={styles.tierStatCol}>
+                      <Text style={styles.statLbl}>Disponibles</Text>
+                      <Text style={[styles.statVal, { color: colors.tertiary }]}>{remaining}</Text>
+                    </View>
+                    <View style={styles.tierStatCol}>
+                      <Text style={styles.statLbl}>Subtotal</Text>
+                      <Text style={[styles.statVal, { color: colors.primary }]}>
+                        ${tierRevenue.toLocaleString('es-AR')}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
               );
-            })
-          )}
-        </div>
-      </section>
+            })}
+          </View>
+        </View>
 
-      {/* Modal Simulador de Escáner QR */}
-      {showQRScannerModal && (
-        <div
-          className="fixed inset-0 z-50 bg-surface-container-lowest/80 backdrop-blur-md flex items-end sm:items-center justify-center p-4"
-          onClick={() => setShowQRScannerModal(false)}
-        >
-          <div
-            className="w-full max-w-sm rounded-3xl bg-surface-container p-6 flex flex-col items-center text-center gap-4 shadow-2xl border border-surface-container-high animate-in fade-in slide-in-from-bottom-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="w-14 h-14 rounded-full bg-primary/20 text-primary flex items-center justify-center">
-              <span className="material-symbols-outlined text-[28px]">
-                qr_code_scanner
-              </span>
-            </div>
+        {/* Lista de Compras Asociadas al Evento */}
+        <View style={styles.sectionBlock}>
+          <View style={styles.attendeesHeaderRow}>
+            <View>
+              <Text style={styles.sectionHeading}>Asistentes y Compras</Text>
+              <Text style={styles.sectionSub}>
+                {filteredAttendees.length} registro(s) para control de acceso
+              </Text>
+            </View>
+          </View>
 
-            <div className="flex flex-col gap-1">
-              <h3 className="font-headline font-bold text-base text-on-surface">
-                Simulador de Escáner de Molinete
-              </h3>
-              <p className="text-xs text-on-surface-variant">
-                Ingresa o selecciona un número de orden para validar el acceso en vivo:
-              </p>
-            </div>
-
-            <div className="w-full flex flex-col gap-2">
-              <input
-                type="text"
-                value={scannedTicketId}
-                onChange={(e) => setScannedTicketId(e.target.value)}
-                placeholder="Ej. TK-8492"
-                className="w-full h-11 px-3 bg-surface-container-high rounded-xl text-center font-mono text-sm uppercase text-on-surface outline-none border border-surface-container-highest"
-              />
-
-              <div className="flex items-center justify-center gap-2 text-xs">
-                <span className="text-on-surface-variant">Prueba rápida:</span>
-                <button
-                  type="button"
-                  onClick={() => setScannedTicketId('TK-8492')}
-                  className="px-2 py-0.5 rounded bg-surface-container-high text-primary font-mono text-[11px]"
-                >
-                  TK-8492
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setScannedTicketId('TK-8450')}
-                  className="px-2 py-0.5 rounded bg-surface-container-high text-primary font-mono text-[11px]"
-                >
-                  TK-8450
-                </button>
-              </div>
-            </div>
-
-            <div className="flex flex-col w-full gap-2 pt-1">
-              <button
-                type="button"
-                onClick={handleSimulateScan}
-                className="w-full h-11 rounded-xl bg-primary text-on-primary font-bold text-xs flex items-center justify-center transition-colors active:scale-95"
+          {/* Filter tabs */}
+          <View style={styles.attendeeFilters}>
+            {['todas', 'confirmada', 'utilizada'].map((st) => (
+              <Pressable
+                key={st}
+                onPress={() => setFilterStatus(st)}
+                style={[styles.attendeeFilterPill, filterStatus === st && styles.activeFilterPill]}
               >
-                Validar e Ingresar
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowQRScannerModal(false)}
-                className="w-full h-10 rounded-xl bg-transparent text-on-surface-variant font-semibold text-xs hover:text-on-surface"
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+                <Text
+                  style={[
+                    styles.attendeeFilterText,
+                    filterStatus === st && styles.activeFilterText,
+                  ]}
+                >
+                  {st.charAt(0).toUpperCase() + st.slice(1)}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          {/* Attendees List */}
+          <View style={styles.attendeesList}>
+            {filteredAttendees.length === 0 ? (
+              <View style={styles.emptyAttendees}>
+                <Text style={styles.emptyAttText}>No hay compras con este filtro</Text>
+              </View>
+            ) : (
+              filteredAttendees.map((att) => {
+                const canCheckIn = att.status === 'confirmada';
+
+                return (
+                  <View key={att.id} style={styles.attendeeCard}>
+                    <View style={styles.attHeaderRow}>
+                      <View style={styles.attUserCol}>
+                        <Text style={styles.attUserName}>{att.buyerName}</Text>
+                        <Text style={styles.attTicketDetails}>
+                          {att.tierName} × {att.quantity} entrada(s) • #{att.id}
+                        </Text>
+                      </View>
+                      <StatusBadge status={att.status} />
+                    </View>
+
+                    {att.checkedInAt && (
+                      <Text style={styles.checkedInStamp}>✓ Ingresó: {att.checkedInAt}</Text>
+                    )}
+
+                    {/* Action buttons: Chat & Check-in */}
+                    <View style={styles.attActionsRow}>
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={`Abrir chat con ${att.buyerName}`}
+                        onPress={() => router.push(`/(buyer)/chat/${att.id}`)}
+                        style={styles.attChatBtn}
+                      >
+                        <Text style={styles.attChatIcon}>💬</Text>
+                        <Text style={styles.attChatText}>Chat</Text>
+                      </Pressable>
+
+                      {canCheckIn ? (
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={`Validar entrada de ${att.buyerName}`}
+                          onPress={() => handleValidateEntry(att.id)}
+                          style={styles.attCheckInBtn}
+                        >
+                          <Text style={styles.attCheckInIcon}>🎟️</Text>
+                          <Text style={styles.attCheckInText}>Validar Entrada (Check-in)</Text>
+                        </Pressable>
+                      ) : (
+                        <View style={styles.attDoneBox}>
+                          <Text style={styles.attDoneText}>✓ Validada</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                );
+              })
+            )}
+          </View>
+        </View>
+      </ScrollView>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: colors.surface,
+  },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  notFound: {
+    color: colors.onSurface,
+    fontSize: 16,
+  },
+  scrollContent: {
+    padding: spacing.md,
+    gap: spacing.md,
+    paddingBottom: 40,
+  },
+  heroCard: {
+    height: 140,
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: colors.surfaceContainerLowest,
+  },
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  },
+  heroOverlay: {
+    position: 'absolute',
+    inset: 0,
+    backgroundColor: 'rgba(11, 19, 38, 0.75)',
+  },
+  heroDetails: {
+    position: 'absolute',
+    bottom: 12,
+    left: 12,
+    right: 12,
+  },
+  eventName: {
+    color: colors.onSurface,
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  eventDate: {
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  eventVenue: {
+    color: colors.onSurfaceVariant,
+    fontSize: 11,
+    marginTop: 2,
+  },
+  metricsRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  metricCard: {
+    flex: 1,
+    backgroundColor: colors.surfaceContainerHigh,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.surfaceContainerHighest,
+  },
+  metricLabel: {
+    color: colors.outline,
+    fontSize: 10,
+    textTransform: 'uppercase',
+    fontWeight: '700',
+  },
+  metricValuePrice: {
+    color: colors.tertiary,
+    fontSize: 18,
+    fontWeight: '800',
+    marginTop: 4,
+  },
+  metricValue: {
+    color: colors.primary,
+    fontSize: 16,
+    fontWeight: '800',
+    marginTop: 4,
+  },
+  metricSub: {
+    color: colors.onSurfaceVariant,
+    fontSize: 10,
+    marginTop: 4,
+  },
+  miniProgressBg: {
+    height: 4,
+    backgroundColor: colors.surfaceContainerLowest,
+    borderRadius: 2,
+    marginTop: 8,
+    overflow: 'hidden',
+  },
+  miniProgressFill: {
+    height: '100%',
+    backgroundColor: colors.primary,
+  },
+  sectionBlock: {
+    backgroundColor: colors.surfaceContainerLow,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.surfaceContainerHigh,
+  },
+  sectionHeading: {
+    color: colors.onSurface,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  sectionSub: {
+    color: colors.onSurfaceVariant,
+    fontSize: 11,
+    marginTop: 2,
+  },
+  tiersContainer: {
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  tierDetailCard: {
+    backgroundColor: colors.surfaceContainerHigh,
+    borderRadius: borderRadius.md,
+    padding: spacing.sm,
+  },
+  tierTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  tierName: {
+    color: colors.onSurface,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  tierPrice: {
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  tierProgressBg: {
+    height: 4,
+    backgroundColor: colors.surfaceContainerLowest,
+    borderRadius: 2,
+    marginVertical: 8,
+    overflow: 'hidden',
+  },
+  tierProgressFill: {
+    height: '100%',
+    backgroundColor: colors.tertiary,
+  },
+  tierStatsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  tierStatCol: {
+    alignItems: 'center',
+  },
+  statLbl: {
+    color: colors.outline,
+    fontSize: 9,
+    textTransform: 'uppercase',
+  },
+  statVal: {
+    color: colors.onSurface,
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  attendeesHeaderRow: {
+    marginBottom: spacing.sm,
+  },
+  attendeeFilters: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: spacing.md,
+  },
+  attendeeFilterPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.surfaceContainerHigh,
+  },
+  activeFilterPill: {
+    backgroundColor: colors.tertiaryContainer,
+  },
+  attendeeFilterText: {
+    color: colors.onSurfaceVariant,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  activeFilterText: {
+    color: colors.onTertiary,
+  },
+  attendeesList: {
+    gap: spacing.sm,
+  },
+  emptyAttendees: {
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+  emptyAttText: {
+    color: colors.outline,
+    fontSize: 12,
+  },
+  attendeeCard: {
+    backgroundColor: colors.surfaceContainerHigh,
+    borderRadius: borderRadius.md,
+    padding: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.surfaceContainerHighest,
+  },
+  attHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  attUserCol: {
+    flex: 1,
+    paddingRight: 8,
+  },
+  attUserName: {
+    color: colors.onSurface,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  attTicketDetails: {
+    color: colors.onSurfaceVariant,
+    fontSize: 11,
+    marginTop: 2,
+  },
+  checkedInStamp: {
+    color: colors.tertiary,
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  attActionsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.surfaceContainerHighest,
+  },
+  attChatBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surfaceContainerHighest,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: borderRadius.md,
+  },
+  attChatIcon: {
+    fontSize: 12,
+    marginRight: 4,
+  },
+  attChatText: {
+    color: colors.onSurface,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  attCheckInBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    paddingVertical: 6,
+    borderRadius: borderRadius.md,
+  },
+  attCheckInIcon: {
+    fontSize: 12,
+    marginRight: 4,
+  },
+  attCheckInText: {
+    color: colors.onPrimary,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  attDoneBox: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceContainerLowest,
+    borderRadius: borderRadius.md,
+    paddingVertical: 6,
+  },
+  attDoneText: {
+    color: colors.outline,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+});
+export default OrganizerEventDetailScreen;

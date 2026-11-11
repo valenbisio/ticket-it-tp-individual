@@ -1,8 +1,8 @@
 import crypto from "crypto";
 
 export class Usuario {
-  constructor({ nombre, apellido, favoritos = [] }) {
-    this.id = crypto.randomUUID();
+  constructor({ id = crypto.randomUUID(), nombre, apellido, favoritos = [] }) {
+    this.id = id;
     this.nombre = nombre;
     this.apellido = apellido;
     this.favoritos = favoritos; // Evento[]

@@ -6,7 +6,7 @@ export class EventoController {
   }
 
   async buscarEventos(req, res, next) {
-    const { q, categoria, ordenarPor, orden } = req.query;
+    const { q, categoria, ordenarPor, orden } = req.validatedQuery ?? req.query;
 
     try {
       const eventos = await this.eventoService.buscarEventos({
