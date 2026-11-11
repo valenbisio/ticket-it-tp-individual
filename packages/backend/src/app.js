@@ -12,7 +12,6 @@ import { swaggerSpec } from "./swagger.js";
 
 const app = express();
 
-app.use(express.json());
 app.use(
   cors({
     origin: process.env.ALLOWED_ORIGINS
@@ -20,6 +19,7 @@ app.use(
       : true,
   }),
 );
+app.use(express.json());
 
 // Documentación
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
