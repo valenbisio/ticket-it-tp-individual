@@ -256,7 +256,7 @@ export const EventDetailScreen = () => {
             <View style={styles.quantityCard}>
               <View>
                 <Text style={styles.quantityTitle}>Cantidad de entradas</Text>
-                <Text style={styles.quantityLimit}>Máximo {Math.min(availableQuota, 6)} por compra</Text>
+                <Text style={styles.quantityLimit}>Disponibles: {availableQuota}</Text>
               </View>
               <View style={styles.stepperRow}>
                 <Pressable
@@ -271,12 +271,10 @@ export const EventDetailScreen = () => {
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel="Aumentar cantidad"
-                  onPress={() =>
-                    setQuantity((q) => Math.min(Math.min(availableQuota, 6), q + 1))
-                  }
+                  onPress={() => setQuantity((q) => Math.min(availableQuota, q + 1))}
                   style={[
                     styles.stepperBtn,
-                    quantity >= Math.min(availableQuota, 6) && styles.stepperDisabled,
+                    quantity >= availableQuota && styles.stepperDisabled,
                   ]}
                 >
                   <Text style={styles.stepperBtnText}>+</Text>

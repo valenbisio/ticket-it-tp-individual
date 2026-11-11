@@ -215,7 +215,7 @@ export const OrganizerEventDetailScreen = () => {
                       <Pressable
                         accessibilityRole="button"
                         accessibilityLabel={`Abrir chat con ${att.buyerName}`}
-                        onPress={() => router.push(`/(buyer)/chat/${att.id}`)}
+                        onPress={() => router.push(`/chat/${att.id}`)}
                         style={styles.attChatBtn}
                       >
                         <Text style={styles.attChatIcon}>💬</Text>

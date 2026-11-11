@@ -43,7 +43,20 @@ export class CompraService {
     return serializarComprasDeEvento(evento, compras, this.hoy ?? new Date());
   }
 
-  async realizarCompra(eventoId, compradorId, tipoEntradaNombre, cantidad) {
+  async obtenerCompra(compraId, usuarioId) {
+    const compra = await this.compraRepository.obtenerPorId(compraId);
+    if (!compra) {
+      throw new NotFoundError(`Compra no encontrada: ${compraId}`);
+    }
+    const esComprador = compra.comprador?.id === usuarioId;
+    const esOrganizador = compra.evento?.organizador?.id === usuarioId;
+    if (!esComprador && !esOrganizador) {
+      throw new ForbiddenError("El usuario no participa de esta compra");
+    }
+    return compra;
+  }
+
+  async realizarCompra(eventoId, comprador, tipoEntradaNombre, cantidad) {
     const evento = this.eventoRepository.obtenerPorId(eventoId);
     if (!evento) throw new NotFoundError(`Evento no encontrado: ${eventoId}`);
     const tipoEntrada = evento.tiposEntrada.find(
@@ -64,8 +77,9 @@ export class CompraService {
     }
 
     tipoEntrada.reducirCupo(cantidad);
+    const compradorDatos = typeof comprador === "string" ? { id: comprador } : comprador;
     const compra = new Compra({
-      comprador: { id: compradorId },
+      comprador: compradorDatos,
       evento,
       tipoEntrada,
       cantidad,
@@ -89,7 +103,7 @@ export class CompraService {
       mensaje: texto,
     });
     compra.agregarMensaje(mensaje);
-    return mensaje;
+    return { mensaje, rol: esOrganizador ? "organizador" : "comprador" };
   }
 
   async obtenerMensajes(compraId, usuarioId) {
@@ -106,6 +120,7 @@ export class CompraService {
         nombre: mensaje.usuario?.nombre ?? null,
         apellido: mensaje.usuario?.apellido ?? null,
       },
+      rol: mensaje.usuario?.id === compra.evento?.organizador?.id ? "organizador" : "comprador",
       mensaje: mensaje.mensaje,
       enviado: mensaje.enviado,
     }));

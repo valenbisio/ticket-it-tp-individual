@@ -54,7 +54,9 @@ export const api = {
     if (filters.q) query.set('q', filters.q);
     if (filters.categoria) {
       const categories = await this.getCategories();
-      const category = categories.find((item) => item.nombre.toLowerCase() === filters.categoria.toLowerCase());
+      const normalize = (value) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      const category = categories.find((item) => item.id === filters.categoria)
+        || categories.find((item) => normalize(item.nombre) === normalize(filters.categoria));
       if (category) query.set('categoria', category.id);
     }
     const orderField = filters.ordenarPor === 'puntaje' ? 'puntajeOrganizador' : filters.ordenarPor;
@@ -75,6 +77,7 @@ export const api = {
     if (!category) throw new Error('El backend no tiene categorías cargadas');
     const data = await request('/api/eventos', { method: 'POST', body: {
       nombre: event.name, descripcion: event.description, categoriaId: category.id,
+      lugar: event.venue, direccion: event.venueAddress,
       fecha: new Date(`${event.date}T${event.showTime || '21:00'}:00`).toISOString(),
       multimedia: event.imageUrl ? [event.imageUrl] : [],
       tiposEntrada: event.tiers.map((tier) => ({ nombre: tier.name, descripcion: tier.description, precio: tier.price, cupo: tier.totalQuota })),
@@ -92,14 +95,14 @@ export const api = {
   },
   async cancelPurchase(id) { return compraUI((await request(`/api/usuarios/usuario-1/compras/${encodeURIComponent(id)}`, { method: 'PATCH' })).compra); },
   async markPurchaseUsed(id) { return compraUI((await request(`/api/usuarios/compras/${encodeURIComponent(id)}/uso`, { method: 'PATCH' })).compra); },
-  async getChatMessages(id) {
-    const result = await request(`/api/usuarios/usuario-1/compras/${encodeURIComponent(id)}/mensajes`);
-    return result.mensajes.map((message, index) => ({ id: `${id}-${index}`, senderId: message.usuario?.id, senderName: [message.usuario?.nombre, message.usuario?.apellido].filter(Boolean).join(' '), senderRole: message.usuario?.id === 'usuario-2' ? 'organizer' : 'buyer', text: message.mensaje, timestamp: new Date(message.enviado).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) }));
+  async getChatMessages(id, userId) {
+    const result = await request(`/api/usuarios/${encodeURIComponent(userId)}/compras/${encodeURIComponent(id)}/mensajes`);
+    return result.mensajes.map((message, index) => ({ id: `${id}-${index}`, senderId: message.usuario?.id, senderName: [message.usuario?.nombre, message.usuario?.apellido].filter(Boolean).join(' '), senderRole: message.rol, text: message.mensaje, timestamp: new Date(message.enviado).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) }));
   },
-  async sendChatMessage(id, message) {
-    const result = await request(`/api/usuarios/usuario-1/compras/${encodeURIComponent(id)}/mensajes`, { method: 'POST', body: { mensaje: message.text } });
+  async sendChatMessage(id, userId, message) {
+    const result = await request(`/api/usuarios/${encodeURIComponent(userId)}/compras/${encodeURIComponent(id)}/mensajes`, { method: 'POST', body: { mensaje: message.text } });
     const sent = result.mensaje;
-    return { id: `${id}-${sent.enviado}`, senderId: sent.usuarioId, text: sent.mensaje, senderName: sent.usuarioId === 'usuario-2' ? 'Sala Norte Producciones' : 'Juan Pérez', senderRole: sent.usuarioId === 'usuario-2' ? 'organizer' : 'buyer', timestamp: new Date(sent.enviado).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) };
+    return { id: `${id}-${sent.enviado}`, senderId: sent.usuarioId, text: sent.mensaje, senderName: [sent.usuario?.nombre, sent.usuario?.apellido].filter(Boolean).join(' '), senderRole: sent.rol, timestamp: new Date(sent.enviado).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) };
   },
   async createReview({ purchaseId, rating, comment }) {
     return request(`/api/usuarios/usuario-1/compras/${encodeURIComponent(purchaseId)}/resenias`, { method: 'POST', body: { puntuacion: rating, detalle: comment } });

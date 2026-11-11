@@ -2,11 +2,13 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '../../contexts/AppContext.jsx';
 import { colors, spacing, borderRadius } from '../../data/theme.js';
 
 export const Header = ({ title, subtitle, showBack = false, onBack }) => {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { currentRole, currentUser } = useApp();
 
   const handleBack = () => {
@@ -20,7 +22,7 @@ export const Header = ({ title, subtitle, showBack = false, onBack }) => {
   };
 
   return (
-    <View style={styles.headerContainer}>
+    <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 12) }]}>
       <View style={styles.contentRow}>
         {/* Left: Back button or Logo */}
         <View style={styles.leftGroup}>
@@ -86,7 +88,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceContainerLow,
     borderBottomWidth: 1,
     borderBottomColor: colors.surfaceContainerHigh,
-    paddingTop: 12,
     paddingBottom: 12,
     paddingHorizontal: spacing.md,
   },

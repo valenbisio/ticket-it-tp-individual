@@ -92,12 +92,14 @@ router.route("/").get(autenticar, requerirRol("comprador", "organizador"), valid
  *         application/json:
  *           schema:
  *             type: object
- *             required: [nombre, descripcion, categoriaId, fecha, tiposEntrada]
+ *             required: [nombre, descripcion, categoriaId, fecha, lugar, direccion, tiposEntrada]
  *             properties:
  *               nombre: { type: string, example: Festival de Primavera }
  *               descripcion: { type: string, example: Música en vivo al aire libre }
  *               categoriaId: { type: string, description: ID de /api/eventos/categorias }
  *               fecha: { type: string, format: date-time, example: '2027-03-12T20:00:00.000Z' }
+ *               lugar: { type: string, example: Estadio Movistar Arena }
+ *               direccion: { type: string, example: Humboldt 450, Villa Crespo, CABA }
  *               multimedia: { type: array, items: { type: string } }
  *               tiposEntrada:
  *                 type: array

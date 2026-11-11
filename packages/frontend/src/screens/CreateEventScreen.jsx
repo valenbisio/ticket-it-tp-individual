@@ -81,6 +81,10 @@ export const CreateEventScreen = () => {
       showToast('Ingresa el recinto o lugar del evento', 'warning');
       return;
     }
+    if (!venueAddress.trim()) {
+      showToast('Ingresa la dirección del evento', 'warning');
+      return;
+    }
     if (!description.trim()) {
       showToast('Ingresa una breve descripción', 'warning');
       return;
@@ -104,7 +108,7 @@ export const CreateEventScreen = () => {
         displayDate: date,
         showTime,
         venue: venue.trim(),
-        venueAddress: venueAddress.trim() || 'CABA',
+        venueAddress: venueAddress.trim(),
         imageUrl: imageUrl.trim(),
         organizerId: currentUser.id,
         organizerName: currentUser.name,
@@ -122,8 +126,8 @@ export const CreateEventScreen = () => {
       await loadEvents();
       showToast('¡Evento publicado con éxito en el catálogo!', 'success');
       router.replace('/(organizer)/events');
-    } catch {
-      showToast('Error al publicar el evento', 'error');
+    } catch (error) {
+      showToast(error.message || 'Error al publicar el evento', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -218,7 +222,7 @@ export const CreateEventScreen = () => {
             style={styles.textInput}
           />
 
-          <Text style={styles.inputLabel}>Dirección</Text>
+          <Text style={styles.inputLabel}>Dirección *</Text>
           <TextInput
             placeholder="Ej: Humboldt 450, Villa Crespo, CABA"
             placeholderTextColor={colors.outline}

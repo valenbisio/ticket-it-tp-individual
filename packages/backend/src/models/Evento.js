@@ -11,6 +11,8 @@ export class Evento {
     multimedia = [], // String[]
     organizador, // Usuario
     resenias = [], // Resenia[]
+    lugar = "",
+    direccion = "",
   }) {
     this.id = id;
     this.nombre = nombre;
@@ -21,6 +23,8 @@ export class Evento {
     this.multimedia = multimedia;
     this.organizador = organizador;
     this.resenias = resenias;
+    this.lugar = lugar;
+    this.direccion = direccion;
   }
 
   tuPrecioEstaEntre(min, max) {

@@ -33,17 +33,17 @@ export const PurchaseChatScreen = () => {
   useEffect(() => {
     if (!purchase) return;
     const loadChat = async () => {
-      const msgs = await api.getChatMessages(purchase.id);
+      const msgs = await api.getChatMessages(purchase.id, currentUser.id);
       setMessages(msgs);
     };
     loadChat();
-  }, [purchase]);
+  }, [purchase, currentUser.id]);
 
   const handleSend = async () => {
     if (!inputText.trim()) return;
     try {
       setIsSending(true);
-      const newMsg = await api.sendChatMessage(purchase.id, {
+      const newMsg = await api.sendChatMessage(purchase.id, currentUser.id, {
         senderId: currentUser.id,
         senderName: currentUser.name,
         senderRole: currentUser.role,

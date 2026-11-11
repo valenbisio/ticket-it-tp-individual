@@ -65,6 +65,8 @@ function serializarEventoCreado(evento) {
     descripcion: evento.descripcion,
     categoria: { id: evento.categoria.id, nombre: evento.categoria.nombre },
     fecha: evento.fecha,
+    lugar: evento.lugar,
+    direccion: evento.direccion,
     multimedia: evento.multimedia,
     organizadorId: evento.organizador.id,
     tiposEntrada: evento.tiposEntrada.map(({ nombre, descripcion, precio, cupo }) => ({

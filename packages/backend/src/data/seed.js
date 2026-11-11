@@ -5,6 +5,7 @@ import {
   Evento,
   TipoEntrada,
   Usuario,
+  Resenia,
 } from "../models/index.js";
 import { CompraRepository } from "../repositories/CompraRepository.js";
 import { EventoRepository } from "../repositories/EventoRepository.js";
@@ -87,6 +88,11 @@ const obraDeTeatroPasada = new Evento({
   tiposEntrada: crearTiposEntrada({ precioGeneral: 7000, precioVip: 14000 }),
   organizador,
 });
+
+recitalFuturo.agregarResenia(new Resenia({ comprador, evento: recitalFuturo, puntuacion: 5, detalle: "Excelente puesta y sonido." }));
+recitalFuturo.agregarResenia(new Resenia({ comprador, evento: recitalFuturo, puntuacion: 4, detalle: "Muy buen recital." }));
+festivalDeHoy.agregarResenia(new Resenia({ comprador, evento: festivalDeHoy, puntuacion: 3, detalle: "Buena música, con algunos detalles." }));
+obraDeTeatroPasada.agregarResenia(new Resenia({ comprador, evento: obraDeTeatroPasada, puntuacion: 2, detalle: "La obra podría mejorar." }));
 
 // Los routers comparten estas instancias para que las altas y compras
 // realizadas durante la ejecución vean los mismos objetos en memoria.

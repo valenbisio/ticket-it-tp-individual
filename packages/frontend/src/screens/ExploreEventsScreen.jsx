@@ -90,7 +90,7 @@ export const ExploreEventsScreen = () => {
           <View style={styles.metaRow}>
             <View style={styles.organizerRatingBox}>
               <Text style={styles.starIcon}>★</Text>
-              <Text style={styles.ratingNumber}>{item.organizerRating}</Text>
+              <Text style={styles.ratingNumber}>{item.organizerRating == null ? '—' : item.organizerRating.toFixed(1)}</Text>
               <Text style={styles.organizerName} numberOfLines={1}>
                 • {item.organizerName}
               </Text>

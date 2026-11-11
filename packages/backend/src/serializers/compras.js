@@ -26,6 +26,7 @@ export function serializarCompra(compra, hoy = new Date()) {
         ? `${compra.evento.organizador.nombre} ${compra.evento.organizador.apellido}`.trim()
         : "",
       lugar: compra.evento?.lugar ?? null,
+      direccion: compra.evento?.direccion ?? null,
     },
     comprador: {
       id: compra.comprador?.id ?? null,
@@ -49,6 +50,8 @@ export function serializarComprasDeEvento(evento, compras, hoy = new Date()) {
       fecha: evento.fecha ? evento.fecha.toISOString() : null,
       categoria: evento.categoria?.nombre ?? null,
       multimedia: evento.multimedia ?? [],
+      lugar: evento.lugar ?? null,
+      direccion: evento.direccion ?? null,
       tiposEntrada: evento.tiposEntrada.map((tipo) => {
         const comprometidas = compras
           .filter((compra) => compra.tipoEntrada === tipo

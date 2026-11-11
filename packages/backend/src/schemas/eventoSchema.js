@@ -15,6 +15,8 @@ export const crearEventoSchema = z.object({
     (fecha) => new Date(fecha) > new Date(),
     "La fecha debe ser futura",
   ),
+  lugar: z.string({ error: "El lugar es obligatorio" }).trim().min(1, "El lugar es obligatorio"),
+  direccion: z.string({ error: "La dirección es obligatoria" }).trim().min(1, "La dirección es obligatoria"),
   multimedia: z.array(z.string().url()).optional().default([]),
   tiposEntrada: z.array(tipoEntradaSchema).min(1, "Debe incluir al menos un tipo de entrada"),
 });

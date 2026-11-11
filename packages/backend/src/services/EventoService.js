@@ -1,6 +1,7 @@
 import { BadRequestError } from "../errors/BadRequestError.js";
 import { NotFoundError } from "../errors/NotFoundError.js";
 import { Evento, TipoEntrada } from "../models/index.js";
+import { normalizar } from "../utils/texto.js";
 
 export class EventoService {
   constructor({ eventoRepository, categoriaRepository }) {
@@ -24,6 +25,8 @@ export class EventoService {
       descripcion: datos.descripcion.trim(),
       categoria,
       fecha: datos.fecha,
+      lugar: datos.lugar.trim(),
+      direccion: datos.direccion.trim(),
       multimedia: datos.multimedia ?? [],
       organizador: {
         id: datos.organizadorId,
@@ -104,6 +107,8 @@ export class EventoService {
       descripcion: evento.descripcion,
       categoria: { id: evento.categoria.id, nombre: evento.categoria.nombre },
       fecha: evento.fecha,
+      lugar: evento.lugar,
+      direccion: evento.direccion,
       portada: evento.multimedia[0] ?? null,
       organizador: `${evento.organizador.nombre} ${evento.organizador.apellido}`,
       organizadorId: evento.organizador.id,

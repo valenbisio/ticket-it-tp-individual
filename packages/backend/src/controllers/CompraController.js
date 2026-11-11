@@ -42,11 +42,14 @@ export class CompraController {
       const { compraId } = req.params;
       const { mensaje } = req.body;
       const resultado = await this.compraService.enviarMensaje(compraId, req.usuario.id, mensaje);
+      const mensajeEnviado = resultado.mensaje;
       return res.status(201).json({
         mensaje: {
-          usuarioId: resultado.usuario.id,
-          mensaje: resultado.mensaje,
-          enviado: resultado.enviado,
+          usuarioId: mensajeEnviado.usuario.id,
+          usuario: { id: mensajeEnviado.usuario.id, nombre: mensajeEnviado.usuario.nombre, apellido: mensajeEnviado.usuario.apellido },
+          rol: resultado.rol,
+          mensaje: mensajeEnviado.mensaje,
+          enviado: mensajeEnviado.enviado,
         },
       });
     } catch (error) {
