@@ -1,5 +1,5 @@
 ---
-name: arquitectura-capas-back
+name: arquitectura-capas
 description: Guía al agente para escribir y revisar el backend (Node + Express) respetando la arquitectura por capas (rutas/controllers, servicios, dominio, repositorios) y evitando el modelo anémico, poniendo las reglas de negocio dentro de las entidades. Activar siempre que se cree o modifique un endpoint, ruta, controller, servicio, entidad, modelo, repositorio o regla de negocio en packages/backend, o cuando el usuario mencione capas, arquitectura, modelo anémico, dominio rico, DDD, "dónde va esta lógica", responsabilidades o refactor del backend, aunque no lo pida explícitamente.
 ---
 
