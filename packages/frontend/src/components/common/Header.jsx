@@ -2,6 +2,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, Image } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '../../contexts/AppContext.jsx';
 import { colors, spacing, borderRadius } from '../../data/theme.js';
@@ -33,11 +34,11 @@ export const Header = ({ title, subtitle, showBack = false, onBack }) => {
               onPress={handleBack}
               style={({ pressed }) => [styles.backButton, pressed && styles.buttonPressed]}
             >
-              <Text style={styles.backButtonText}>←</Text>
+              <Ionicons name="arrow-back" size={20} color={colors.onSurface} />
             </Pressable>
           ) : (
             <View style={styles.logoBadge}>
-              <Text style={styles.logoIcon}>🎟️</Text>
+              <Ionicons name="ticket" size={20} color={colors.primary} />
             </View>
           )}
 

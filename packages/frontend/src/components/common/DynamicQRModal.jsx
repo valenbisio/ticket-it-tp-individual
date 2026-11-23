@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Modal, Pressable } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../../contexts/AppContext.jsx';
 import { colors, spacing, borderRadius } from '../../data/theme.js';
 
@@ -97,7 +98,7 @@ export const DynamicQRModal = () => {
 
             {/* Token & Dynamic Refresh */}
             <View style={styles.refreshBadge}>
-              <Text style={styles.refreshIcon}>⚡</Text>
+              <Ionicons name="sync" size={14} color={colors.primary} style={styles.refreshIcon} />
               <Text style={styles.refreshText}>
                 Se actualiza en {countdown}s para evitar capturas
               </Text>

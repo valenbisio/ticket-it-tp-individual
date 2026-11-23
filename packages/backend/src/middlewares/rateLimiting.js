@@ -21,4 +21,4 @@ export const crearLimite = ({ windowMs, limit }) =>
 export const limiteGeneral = crearLimite({
   windowMs: 5 * 60 * 1000, //5 minutos
   limit: 150,               //máx 150 solicitudes por IP en la ventana
-});
+});    

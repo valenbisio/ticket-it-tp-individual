@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../contexts/AppContext.jsx';
 import { Header } from '../components/common/Header.jsx';
 import { BottomTabBar } from '../components/common/BottomTabBar.jsx';
@@ -69,8 +70,16 @@ export const MyPurchasesScreen = () => {
         <View style={styles.cardTopRow}>
           <View style={styles.eventInfoCol}>
             <Text style={styles.eventName}>{item.eventName}</Text>
-            <Text style={styles.eventDate}>📅 {item.eventDisplayDate || item.eventDate}</Text>
-            {daysLabel && <Text style={styles.daysLeftText}>⏳ {daysLabel}</Text>}
+            <View style={styles.eventDateRow}>
+              <Ionicons name="calendar" size={14} color={colors.tertiary} />
+              <Text style={styles.eventDate}>{item.eventDisplayDate || item.eventDate}</Text>
+            </View>
+            {daysLabel && (
+              <View style={styles.daysLeftRow}>
+                <Ionicons name="time" size={13} color={colors.warning} />
+                <Text style={styles.daysLeftText}>{daysLabel}</Text>
+              </View>
+            )}
           </View>
           <StatusBadge status={item.status} />
         </View>
@@ -103,7 +112,7 @@ export const MyPurchasesScreen = () => {
               onPress={() => setActiveQR(item)}
               style={({ pressed }) => [styles.qrActionBtn, pressed && styles.btnPressed]}
             >
-              <Text style={styles.qrActionIcon}>⚡</Text>
+              <Ionicons name="qr-code-outline" size={16} color={colors.onPrimary} style={styles.actionBtnIcon} />
               <Text style={styles.qrActionText}>Ver Entrada / QR</Text>
             </Pressable>
           )}
@@ -121,7 +130,12 @@ export const MyPurchasesScreen = () => {
                 pressed && styles.btnPressed,
               ]}
             >
-              <Text accessibilityElementsHidden importantForAccessibility="no" style={[styles.rateActionIcon, item.hasRated && styles.ratedActionText]}>★</Text>
+              <Ionicons
+                name="star"
+                size={16}
+                color={colors.warning}
+                style={styles.actionBtnIcon}
+              />
               <Text style={[styles.rateActionText, item.hasRated && styles.ratedActionText]}>
                 {item.hasRated ? 'Ver mi calificación' : 'Calificar Evento'}
               </Text>
@@ -135,7 +149,7 @@ export const MyPurchasesScreen = () => {
             onPress={() => router.push(`/(buyer)/chat/${item.id}`)}
             style={({ pressed }) => [styles.chatActionBtn, pressed && styles.btnPressed]}
           >
-            <Text style={styles.chatActionIcon}>💬</Text>
+            <Ionicons name="chatbubble-ellipses-outline" size={16} color={colors.onSurface} style={styles.actionBtnIcon} />
             <Text style={styles.chatActionText}>Chat con Organizador</Text>
           </Pressable>
         </View>
@@ -195,7 +209,7 @@ export const MyPurchasesScreen = () => {
         contentContainerStyle={styles.listContainer}
         ListEmptyComponent={
           purchasesLoading || filterLoading ? <PurchaseListSkeleton /> : <View style={styles.emptyCenter}>
-            <Text style={styles.emptyEmoji}>🎟️</Text>
+            <Ionicons name="ticket-outline" size={48} color={colors.outline} style={styles.emptyEmoji} />
             <Text style={styles.emptyTitle}>No tienes compras en este estado</Text>
             <Text style={styles.emptySubtitle}>
               Explora el catálogo y adquiere tus entradas con QR dinámico.
@@ -271,6 +285,21 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingRight: 10,
   },
+  eventDateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
+  daysLeftRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
+  actionBtnIcon: {
+    marginRight: 6,
+  },
   eventName: {
     color: colors.onSurface,
     fontSize: 16,
@@ -282,7 +311,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   daysLeftText: {
-    color: colors.tertiary,
+    color: colors.warning,
     fontSize: 12,
     fontWeight: '800',
     marginTop: 4,

@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, Image } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../contexts/AppContext.jsx';
 import { Header } from '../components/common/Header.jsx';
 import { BottomTabBar } from '../components/common/BottomTabBar.jsx';
@@ -71,7 +72,10 @@ export const OrganizerEventsScreen = () => {
             <Text style={styles.eventName} numberOfLines={1}>
               {item.name}
             </Text>
-            <Text style={styles.eventDate}>📅 {item.displayDate || item.date}</Text>
+            <View style={styles.eventDateRow}>
+              <Ionicons name="calendar" size={13} color={colors.tertiary} />
+              <Text style={styles.eventDate}>{item.displayDate || item.date}</Text>
+            </View>
           </View>
         </View>
 
@@ -117,7 +121,7 @@ export const OrganizerEventsScreen = () => {
             {/* Organizer Profile & Overall KPIs */}
             <View style={styles.profileCard}>
               <View style={styles.profileTopRow}>
-                <View>
+                <View style={styles.welcomeContainer}>
                   <WelcomeGreeting name={currentUser.name} />
                 </View>
                 <View style={styles.reputationPill}>
@@ -186,12 +190,20 @@ const styles = StyleSheet.create({
   },
   profileTopRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    rowGap: spacing.sm,
+  },
+  welcomeContainer: {
+    flex: 1,
+    flexBasis: 220,
+    minWidth: 0,
   },
   reputationPill: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexShrink: 1,
     backgroundColor: 'rgba(76, 215, 246, 0.15)',
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -212,6 +224,7 @@ const styles = StyleSheet.create({
     color: colors.onTertiary,
     fontSize: 9,
     fontWeight: '700',
+    flexShrink: 1,
   },
   metricsGrid: {
     flexDirection: 'row',
@@ -322,10 +335,15 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
   },
+  eventDateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
   eventDate: {
     color: colors.onSurfaceVariant,
     fontSize: 11,
-    marginTop: 2,
   },
   kpiRow: {
     flexDirection: 'row',

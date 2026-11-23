@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../../contexts/AppContext.jsx';
 import { colors, spacing, borderRadius } from '../../data/theme.js';
 
@@ -29,7 +30,11 @@ export const BottomTabBar = () => {
           style={styles.tabItem}
         >
           <View style={[styles.iconBox, isExplore && styles.activeIconBox]}>
-            <Text style={[styles.iconText, isExplore && styles.activeIconText]}>🔍</Text>
+            <Ionicons
+              name={isExplore ? 'compass' : 'compass-outline'}
+              size={22}
+              color={isExplore ? colors.primary : colors.onSurfaceVariant}
+            />
           </View>
           <Text style={[styles.tabLabel, isExplore && styles.activeTabLabel]}>
             Explorar
@@ -44,7 +49,11 @@ export const BottomTabBar = () => {
           style={styles.tabItem}
         >
           <View style={[styles.iconBox, isPurchases && styles.activeIconBox]}>
-            <Text style={[styles.iconText, isPurchases && styles.activeIconText]}>🎟️</Text>
+            <Ionicons
+              name={isPurchases ? 'ticket' : 'ticket-outline'}
+              size={22}
+              color={isPurchases ? colors.primary : colors.onSurfaceVariant}
+            />
             {buyerActivePurchasesCount > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>{buyerActivePurchasesCount}</Text>
@@ -64,8 +73,16 @@ export const BottomTabBar = () => {
           style={styles.tabItem}
         >
           <View style={[styles.iconBox, isMessages && styles.activeIconBox]}>
-            <Text style={[styles.iconText, isMessages && styles.activeIconText]}>✉</Text>
-            {unreadMessagesCount > 0 && <View style={styles.badge}><Text style={styles.badgeText}>{unreadMessagesCount > 99 ? '99+' : unreadMessagesCount}</Text></View>}
+            <Ionicons
+              name={isMessages ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'}
+              size={22}
+              color={isMessages ? colors.primary : colors.onSurfaceVariant}
+            />
+            {unreadMessagesCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{unreadMessagesCount > 99 ? '99+' : unreadMessagesCount}</Text>
+              </View>
+            )}
           </View>
           <Text style={[styles.tabLabel, isMessages && styles.activeTabLabel]}>Mensajes</Text>
         </Pressable>
@@ -79,7 +96,11 @@ export const BottomTabBar = () => {
           style={styles.tabItem}
         >
           <View style={[styles.iconBox, isProfile && styles.activeIconBox]}>
-            <Text style={[styles.iconText, isProfile && styles.activeIconText]}>👤</Text>
+            <Ionicons
+              name={isProfile ? 'person' : 'person-outline'}
+              size={22}
+              color={isProfile ? colors.primary : colors.onSurfaceVariant}
+            />
           </View>
           <Text style={[styles.tabLabel, isProfile && styles.activeTabLabel]}>Perfil</Text>
         </Pressable>
@@ -103,7 +124,11 @@ export const BottomTabBar = () => {
         style={styles.tabItem}
       >
         <View style={[styles.iconBox, isEvents && styles.activeIconBox]}>
-          <Text style={[styles.iconText, isEvents && styles.activeIconText]}>🎪</Text>
+          <Ionicons
+            name={isEvents ? 'calendar' : 'calendar-outline'}
+            size={22}
+            color={isEvents ? colors.primary : colors.onSurfaceVariant}
+          />
         </View>
         <Text style={[styles.tabLabel, isEvents && styles.activeTabLabel]}>
           Mis Eventos
@@ -117,8 +142,8 @@ export const BottomTabBar = () => {
         onPress={() => router.push('/(organizer)/create')}
         style={styles.tabItem}
       >
-        <View style={[styles.iconBox, isCreate && styles.activeIconBox, styles.createIconBox]}>
-          <Text style={[styles.iconText, styles.createIconText]}>＋</Text>
+        <View style={[styles.iconBox, styles.createIconBox]}>
+          <Ionicons name="add" size={24} color={colors.onTertiary} />
         </View>
         <Text style={[styles.tabLabel, isCreate && styles.activeTabLabel]}>
           Crear Evento
@@ -133,8 +158,16 @@ export const BottomTabBar = () => {
         style={styles.tabItem}
       >
         <View style={[styles.iconBox, isMessages && styles.activeIconBox]}>
-          <Text style={[styles.iconText, isMessages && styles.activeIconText]}>✉</Text>
-          {unreadMessagesCount > 0 && <View style={styles.badge}><Text style={styles.badgeText}>{unreadMessagesCount > 99 ? '99+' : unreadMessagesCount}</Text></View>}
+          <Ionicons
+            name={isMessages ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'}
+            size={22}
+            color={isMessages ? colors.primary : colors.onSurfaceVariant}
+          />
+          {unreadMessagesCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{unreadMessagesCount > 99 ? '99+' : unreadMessagesCount}</Text>
+            </View>
+          )}
         </View>
         <Text style={[styles.tabLabel, isMessages && styles.activeTabLabel]}>Mensajes</Text>
       </Pressable>
@@ -148,7 +181,11 @@ export const BottomTabBar = () => {
         style={styles.tabItem}
       >
         <View style={[styles.iconBox, isProfile && styles.activeIconBox]}>
-          <Text style={[styles.iconText, isProfile && styles.activeIconText]}>👤</Text>
+          <Ionicons
+            name={isProfile ? 'person' : 'person-outline'}
+            size={22}
+            color={isProfile ? colors.primary : colors.onSurfaceVariant}
+          />
         </View>
         <Text style={[styles.tabLabel, isProfile && styles.activeTabLabel]}>Perfil</Text>
       </Pressable>

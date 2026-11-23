@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AccessibilityInfo, ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Link } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { PasswordVisibilityIcon } from '../components/common/PasswordVisibilityIcon.jsx';
 import { useAuth } from '../contexts/auth-context.jsx';
 import { colors, spacing, borderRadius } from '../data/theme.js';
@@ -38,7 +39,9 @@ export const RoleSelectScreen = () => {
   return (
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <View style={styles.card}>
-        <Text style={styles.icon} accessibilityElementsHidden importantForAccessibility="no">🎟️</Text>
+        <View style={styles.iconContainer} accessibilityElementsHidden importantForAccessibility="no">
+          <Ionicons name="ticket" size={40} color={colors.secondaryContainer} />
+        </View>
         <Text accessibilityRole="header" style={styles.title}>AI Ticket It</Text>
         <Text style={styles.subtitle}>Ingresá a tu cuenta para continuar</Text>
         <Text style={styles.label}>Email</Text>
@@ -93,7 +96,8 @@ export const RoleSelectScreen = () => {
 const styles = StyleSheet.create({
   container: { flexGrow: 1, backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center', padding: spacing.md },
   card: { width: '100%', maxWidth: 420, backgroundColor: colors.surfaceContainerLow, borderRadius: borderRadius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.surfaceContainerHigh },
-  icon: { fontSize: 38, textAlign: 'center' }, title: { color: colors.onSurface, fontWeight: '800', fontSize: 28, textAlign: 'center', marginTop: spacing.xs },
+  iconContainer: { alignItems: 'center', justifyContent: 'center', marginBottom: spacing.xs },
+  title: { color: colors.onSurface, fontWeight: '800', fontSize: 28, textAlign: 'center', marginTop: spacing.xs },
   subtitle: { color: colors.onSurfaceVariant, textAlign: 'center', marginTop: spacing.xs, marginBottom: spacing.lg },
   label: { color: colors.onSurface, fontWeight: '700', marginBottom: spacing.xs },
   input: { color: colors.onSurface, backgroundColor: colors.surfaceContainer, borderRadius: borderRadius.md, borderWidth: 1, borderColor: colors.outlineVariant, paddingHorizontal: spacing.md, paddingVertical: 14, minHeight: 52, marginBottom: spacing.md, fontSize: 16 }, inputFocused: { borderColor: colors.focus, borderWidth: 2 },

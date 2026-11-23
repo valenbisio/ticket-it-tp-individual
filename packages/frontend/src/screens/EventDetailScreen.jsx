@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../contexts/AppContext.jsx';
 import { Header } from '../components/common/Header.jsx';
 import { useReviews } from '../hooks/useReviews.js';
@@ -89,7 +90,9 @@ export const EventDetailScreen = () => {
           {/* Date & Location Bento */}
           <View style={styles.infoBento}>
             <View style={styles.infoRow}>
-              <Text style={styles.infoIcon}>📅</Text>
+              <View style={[styles.infoIconBox, styles.dateIconBox]}>
+                <Ionicons name="calendar" size={18} color={colors.tertiary} />
+              </View>
               <View>
                 <Text style={styles.infoTitle}>{event.displayDate || event.date}</Text>
                 <Text style={styles.infoSubtitle}>
@@ -98,7 +101,9 @@ export const EventDetailScreen = () => {
               </View>
             </View>
             <View style={[styles.infoRow, { marginTop: spacing.sm }]}>
-              <Text style={styles.infoIcon}>📍</Text>
+              <View style={[styles.infoIconBox, styles.locationIconBox]}>
+                <Ionicons name="location-sharp" size={18} color={colors.secondary} />
+              </View>
               <View>
                 <Text style={styles.infoTitle}>{event.venue}</Text>
                 <Text style={styles.infoSubtitle}>{event.venueAddress || 'CABA'}</Text>
@@ -110,7 +115,7 @@ export const EventDetailScreen = () => {
           <View style={styles.organizerBox}>
             <View style={styles.organizerLeft}>
               <View style={styles.orgAvatar}>
-                <Text style={styles.orgAvatarText}>🎭</Text>
+                <Ionicons name="business-outline" size={20} color={colors.primary} />
               </View>
               <View>
                 <Text style={styles.orgLabel}>Organizado por</Text>
@@ -442,9 +447,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  infoIcon: {
-    fontSize: 20,
+  infoIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.surfaceContainerHighest,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 10,
+  },
+  dateIconBox: {
+    backgroundColor: 'rgba(76, 215, 246, 0.12)',
+  },
+  locationIconBox: {
+    backgroundColor: 'rgba(255, 178, 183, 0.12)',
   },
   infoTitle: {
     color: colors.onSurface,
@@ -765,20 +781,27 @@ const styles = StyleSheet.create({
   },
   buyButton: {
     backgroundColor: colors.primary,
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     paddingVertical: 12,
+    minHeight: 48,
     borderRadius: borderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   buyButtonPressed: {
     opacity: 0.8,
+    transform: [{ scale: 0.98 }],
   },
   buyButtonDisabled: {
     backgroundColor: colors.surfaceContainerHighest,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
   },
   buyButtonText: {
     color: colors.onPrimary,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '800',
+    letterSpacing: 0.3,
   },
   modalOverlay: {
     flex: 1,

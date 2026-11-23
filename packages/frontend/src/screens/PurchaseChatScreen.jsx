@@ -12,6 +12,7 @@ import {
   Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../contexts/AppContext.jsx';
 import { Header } from '../components/common/Header.jsx';
 import { api } from '../services/api.js';
@@ -130,7 +131,7 @@ export const PurchaseChatScreen = () => {
       {(purchase || conversation) && (
         <View style={styles.contextBanner}>
           <View style={styles.contextIconBox}>
-            <Text style={styles.contextIcon}>🎟️</Text>
+            <Ionicons name="ticket-outline" size={18} color={colors.primary} />
           </View>
           <View style={styles.contextCol}>
             <Text style={styles.contextEventName} numberOfLines={1}>
@@ -161,7 +162,7 @@ export const PurchaseChatScreen = () => {
           <View style={styles.emptyChat}><Text accessibilityRole="alert" style={styles.emptyChatTitle}>{loadError}</Text></View>
         ) : (
           <View style={styles.emptyChat}>
-            <Text style={styles.emptyChatEmoji}>💬</Text>
+            <Ionicons name="chatbubbles-outline" size={44} color={colors.outline} style={styles.emptyChatEmoji} />
             <Text style={styles.emptyChatTitle}>Comienza la conversación</Text>
             <Text style={styles.emptyChatSubtitle}>
               Consulta detalles del evento, accesos o dudas sobre tu entrada.

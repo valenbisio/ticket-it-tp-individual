@@ -9,6 +9,7 @@ import {
   Image,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../contexts/AppContext.jsx';
 import { Header } from '../components/common/Header.jsx';
 import { StatusBadge } from '../components/common/StatusBadge.jsx';
@@ -121,8 +122,14 @@ export const OrganizerEventDetailScreen = () => {
           <View style={styles.heroOverlay} />
           <View style={styles.heroDetails}>
             <Text style={styles.eventName}>{event.name}</Text>
-            <Text style={styles.eventDate}>📅 {event.displayDate || event.date}</Text>
-            <Text style={styles.eventVenue}>📍 {event.venue}</Text>
+            <View style={styles.heroMetaRow}>
+              <Ionicons name="calendar" size={14} color={colors.tertiary} />
+              <Text style={styles.eventDate}>{event.displayDate || event.date}</Text>
+            </View>
+            <View style={styles.heroMetaRow}>
+              <Ionicons name="location-sharp" size={14} color={colors.secondary} />
+              <Text style={styles.eventVenue}>{event.venue}</Text>
+            </View>
           </View>
         </View>
 
@@ -281,7 +288,7 @@ export const OrganizerEventDetailScreen = () => {
                         onPress={() => router.push(`/chat/${att.id}`)}
                         style={styles.attChatBtn}
                       >
-                        <Text style={styles.attChatIcon}>💬</Text>
+                        <Ionicons name="chatbubble-ellipses-outline" size={15} color={colors.onSurface} style={styles.actionBtnIcon} />
                         <Text style={styles.attChatText}>Chat</Text>
                       </Pressable>
 
@@ -292,7 +299,7 @@ export const OrganizerEventDetailScreen = () => {
                           onPress={() => handleValidateEntry(att.id)}
                           style={styles.attCheckInBtn}
                         >
-                          <Text style={styles.attCheckInIcon}>🎟️</Text>
+                          <Ionicons name="checkmark-circle-outline" size={16} color={colors.onPrimary} style={styles.actionBtnIcon} />
                           <Text style={styles.attCheckInText}>Validar Entrada (Check-in)</Text>
                         </Pressable>
                       ) : (
@@ -352,6 +359,15 @@ const styles = StyleSheet.create({
     bottom: 12,
     left: 12,
     right: 12,
+  },
+  heroMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
+  actionBtnIcon: {
+    marginRight: 4,
   },
   eventName: {
     color: colors.onSurface,

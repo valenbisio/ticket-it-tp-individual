@@ -7,7 +7,7 @@ export function WelcomeGreeting({ name }) {
   return (
     <View>
       <Text style={styles.label}>Bienvenido/a</Text>
-      <Text accessibilityRole="header" style={styles.title}>Hola, {name}</Text>
+      <Text accessibilityRole="header" style={styles.title}>Hola, {name}!</Text>
     </View>
   );
 }

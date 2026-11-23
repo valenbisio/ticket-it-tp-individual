@@ -13,8 +13,10 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../contexts/AppContext.jsx';
 import { Header } from '../components/common/Header.jsx';
+import { CategoryScroller } from '../components/common/CategoryScroller.jsx';
 import { api } from '../services/api.js';
 import { colors, spacing, borderRadius } from '../data/theme.js';
 
@@ -224,10 +226,13 @@ export const CreateEventScreen = () => {
           {!!fieldErrors.name && <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.fieldError}>{fieldErrors.name}</Text>}
 
           <Text style={styles.inputLabel}>Categoría</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryRow}>
+          <CategoryScroller style={styles.categoryRow}>
             {categoriesLoading ? <ActivityIndicator accessibilityLabel="Cargando categorías" color={colors.primary} /> : categories.map((cat) => (
               <Pressable
                 key={cat}
+                accessibilityRole="button"
+                accessibilityLabel={`Elegir categoría ${cat}`}
+                accessibilityState={{ selected: category === cat }}
                 onPress={() => setCategory(cat)}
                 style={[styles.categoryPill, category === cat && styles.activeCategoryPill]}
               >
@@ -241,7 +246,7 @@ export const CreateEventScreen = () => {
                 </Text>
               </Pressable>
             ))}
-          </ScrollView>
+          </CategoryScroller>
 
           <Text style={styles.inputLabel}>Descripción del Evento *</Text>
           <TextInput
@@ -264,7 +269,15 @@ export const CreateEventScreen = () => {
             </View>
             <View style={styles.halfCol}>
               <Text style={styles.inputLabel}>Hora de inicio *</Text>
-              <Pressable accessibilityRole="button" accessibilityLabel={`Seleccionar hora. Hora actual ${showTime}`} onPress={() => setTimePickerVisible(true)} style={styles.textInput}><Text style={styles.pickerValue}>🕒 {showTime}</Text></Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Seleccionar hora. Hora actual ${showTime}`}
+                onPress={() => setTimePickerVisible(true)}
+                style={[styles.textInput, styles.timeInputButton]}
+              >
+                <Ionicons name="time-outline" size={16} color={colors.primary} style={styles.timeIcon} />
+                <Text style={styles.pickerValue}>{showTime}</Text>
+              </Pressable>
               {!!fieldErrors.showTime && <Text accessibilityRole="alert" style={styles.fieldError}>{fieldErrors.showTime}</Text>}
             </View>
           </View>
@@ -538,6 +551,14 @@ const styles = StyleSheet.create({
     color: colors.onSurface,
     fontSize: 13,
   },
+  timeInputButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  timeIcon: {
+    marginRight: 2,
+  },
   textArea: {
     minHeight: 70,
     textAlignVertical: 'top',
@@ -551,12 +572,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   categoryRow: {
-    flexDirection: 'row',
     marginVertical: 4,
   },
   categoryPill: {
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    minHeight: 44,
+    justifyContent: 'center',
     borderRadius: borderRadius.full,
     backgroundColor: colors.surfaceContainerLow,
     marginRight: 6,

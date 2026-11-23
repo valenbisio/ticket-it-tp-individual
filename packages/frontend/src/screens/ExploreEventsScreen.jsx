@@ -4,18 +4,19 @@ import {
   Text,
   StyleSheet,
   TextInput,
-  ScrollView,
   FlatList,
   Pressable,
   Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../contexts/AppContext.jsx';
 import { Header } from '../components/common/Header.jsx';
 import { BottomTabBar } from '../components/common/BottomTabBar.jsx';
 import { colors, spacing, borderRadius } from '../data/theme.js';
 import { EventListSkeleton } from '../components/common/LoadingSkeleton.jsx';
 import { WelcomeGreeting } from '../components/common/WelcomeGreeting.jsx';
+import { CategoryScroller } from '../components/common/CategoryScroller.jsx';
 import { api } from '../services/api.js';
 
 export const ExploreEventsScreen = () => {
@@ -90,9 +91,12 @@ export const ExploreEventsScreen = () => {
           <Text style={styles.eventTitle} numberOfLines={1}>
             {item.name}
           </Text>
-          <Text style={styles.venueText} numberOfLines={1}>
-            📍 {item.venue}
-          </Text>
+          <View style={styles.venueRow}>
+            <Ionicons name="location-sharp" size={14} color={colors.secondary} />
+            <Text style={styles.venueText} numberOfLines={1}>
+              {item.venue}
+            </Text>
+          </View>
 
           {/* Organizer & Rating Meta */}
           <View style={styles.metaRow}>
@@ -142,7 +146,7 @@ export const ExploreEventsScreen = () => {
 
             {/* Search Input */}
             <View style={styles.searchBox}>
-              <Text style={styles.searchIcon}>🔍</Text>
+              <Ionicons name="search" size={18} color={colors.primary} style={styles.searchIcon} />
               <TextInput
                 placeholder="Buscar por nombre, artista o sala..."
                 placeholderTextColor={colors.outline}
@@ -152,15 +156,13 @@ export const ExploreEventsScreen = () => {
               />
               {search.length > 0 && (
                 <Pressable onPress={() => setSearch('')}>
-                  <Text style={styles.clearSearch}>✕</Text>
+                  <Ionicons name="close-circle" size={18} color={colors.onSurfaceVariant} />
                 </Pressable>
               )}
             </View>
 
             {/* Category Chips Scroll */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
+            <CategoryScroller
               style={styles.categoriesScroll}
               contentContainerStyle={styles.categoriesContainer}
             >
@@ -186,7 +188,7 @@ export const ExploreEventsScreen = () => {
                   </Pressable>
                 );
               })}
-            </ScrollView>
+            </CategoryScroller>
 
             {/* Sort Controls Bar */}
             <View style={styles.sortBar}>
@@ -198,8 +200,14 @@ export const ExploreEventsScreen = () => {
                   onPress={() => setSortBy('fecha')}
                   style={[styles.sortButton, sortBy === 'fecha' && styles.activeSortButton]}
                 >
+                  <Ionicons
+                    name={sortBy === 'fecha' ? 'calendar' : 'calendar-outline'}
+                    size={14}
+                    color={sortBy === 'fecha' ? colors.onPrimaryContainer : colors.tertiary}
+                    style={styles.sortIcon}
+                  />
                   <Text style={[styles.sortBtnText, sortBy === 'fecha' && styles.activeSortBtnText]}>
-                    📅 Fecha
+                    Fecha
                   </Text>
                 </Pressable>
                 <Pressable
@@ -208,8 +216,14 @@ export const ExploreEventsScreen = () => {
                   onPress={() => setSortBy('precio')}
                   style={[styles.sortButton, sortBy === 'precio' && styles.activeSortButton]}
                 >
+                  <Ionicons
+                    name={sortBy === 'precio' ? 'pricetag' : 'pricetag-outline'}
+                    size={14}
+                    color={sortBy === 'precio' ? colors.onPrimaryContainer : colors.success}
+                    style={styles.sortIcon}
+                  />
                   <Text style={[styles.sortBtnText, sortBy === 'precio' && styles.activeSortBtnText]}>
-                    💲 Precio
+                    Precio
                   </Text>
                 </Pressable>
                 <Pressable
@@ -218,8 +232,14 @@ export const ExploreEventsScreen = () => {
                   onPress={() => setSortBy('puntaje')}
                   style={[styles.sortButton, sortBy === 'puntaje' && styles.activeSortButton]}
                 >
+                  <Ionicons
+                    name={sortBy === 'puntaje' ? 'star' : 'star-outline'}
+                    size={14}
+                    color={sortBy === 'puntaje' ? colors.onPrimaryContainer : colors.warning}
+                    style={styles.sortIcon}
+                  />
                   <Text style={[styles.sortBtnText, sortBy === 'puntaje' && styles.activeSortBtnText]}>
-                    ⭐ Puntaje
+                    Puntaje
                   </Text>
                 </Pressable>
               </View>
@@ -228,7 +248,7 @@ export const ExploreEventsScreen = () => {
         }
         ListEmptyComponent={
           isLoading ? <EventListSkeleton /> : <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>🎭</Text>
+            <Ionicons name="search" size={48} color={colors.outline} style={styles.emptyIcon} />
             <Text style={styles.emptyTitle}>No se encontraron eventos</Text>
             <Text style={styles.emptySubtitle}>
               Prueba cambiando los filtros o el término de búsqueda.
@@ -330,6 +350,8 @@ const styles = StyleSheet.create({
   categoryChip: {
     paddingHorizontal: 14,
     paddingVertical: 7,
+    minHeight: 44,
+    justifyContent: 'center',
     borderRadius: borderRadius.full,
     backgroundColor: colors.surfaceContainerHigh,
   },
@@ -362,8 +384,10 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   sortButton: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: borderRadius.sm,
     backgroundColor: colors.surfaceContainerHigh,
   },
@@ -463,10 +487,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
   },
+  venueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
   venueText: {
     color: colors.onSurfaceVariant,
     fontSize: 12,
-    marginTop: 2,
+    flex: 1,
+  },
+  sortIcon: {
+    marginRight: 4,
   },
   metaRow: {
     flexDirection: 'row',
@@ -526,15 +559,19 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   ctaButton: {
-    backgroundColor: colors.primaryContainer,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    minHeight: 40,
     borderRadius: borderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   ctaText: {
-    color: colors.onPrimaryContainer,
-    fontSize: 11,
+    color: colors.onPrimary,
+    fontSize: 13,
     fontWeight: '800',
+    letterSpacing: 0.2,
   },
   emptyContainer: {
     alignItems: 'center',

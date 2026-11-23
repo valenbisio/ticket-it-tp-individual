@@ -9,6 +9,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useApp } from '../contexts/AppContext.jsx';
 import { Header } from '../components/common/Header.jsx';
 import { api } from '../services/api.js';
@@ -96,7 +97,10 @@ export const RateEventScreen = () => {
           <View style={styles.eventCard}>
             <Text style={styles.eventLabel}>Calificando experiencia de:</Text>
             <Text style={styles.eventName}>{purchase.eventName}</Text>
-            <Text style={styles.eventDate}>📅 {purchase.eventDisplayDate || purchase.eventDate}</Text>
+            <View style={styles.eventDateRow}>
+              <Ionicons name="calendar-outline" size={14} color={colors.onSurfaceVariant} />
+              <Text style={styles.eventDate}>{purchase.eventDisplayDate || purchase.eventDate}</Text>
+            </View>
             <Text style={styles.orgName}>Organizador: {purchase.organizerName}</Text>
           </View>
         )}
@@ -200,11 +204,16 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     marginTop: 2,
   },
+  eventDateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
   eventDate: {
     color: colors.primary,
     fontSize: 12,
     fontWeight: '600',
-    marginTop: 2,
   },
   orgName: {
     color: colors.onSurfaceVariant,
