@@ -37,6 +37,36 @@ describe("Compra", () => {
     assert.equal(compra.total, 2000);
   });
 
+  it("confirma el pago solo cuando la compra está pendiente", () => {
+    const compra = crearCompra();
+
+    compra.confirmarPago();
+
+    assert.equal(compra.estado, EstadoCompra.CONFIRMADA);
+    assert.throws(() => { compra.estado = EstadoCompra.UTILIZADA; }, TypeError);
+    assert.throws(() => compra.confirmarPago(), /Solo se pueden confirmar compras pendientes de pago/);
+  });
+
+  it("marca como utilizada solo una compra confirmada", () => {
+    const compra = crearCompra({ estado: EstadoCompra.CONFIRMADA });
+
+    compra.marcarComoUtilizada();
+
+    assert.equal(compra.estado, EstadoCompra.UTILIZADA);
+    assert.throws(() => crearCompra().marcarComoUtilizada(), /Solo se pueden validar compras confirmadas/);
+  });
+
+  it("permite calificar solo al comprador de una entrada utilizada y una sola vez", () => {
+    const compraPendiente = crearCompra();
+    const compraUtilizada = crearCompra({ estado: EstadoCompra.UTILIZADA });
+
+    assert.throws(() => compraPendiente.validarPuedeCalificarse("usuario-1"), /entrada utilizada/);
+    compraUtilizada.validarPuedeCalificarse("usuario-1");
+    assert.throws(() => compraUtilizada.validarPuedeCalificarse("otro-usuario"), /Solo el comprador/);
+    compraUtilizada.evento.resenias.push({ comprador: { id: "usuario-1" } });
+    assert.throws(() => compraUtilizada.validarPuedeCalificarse("usuario-1"), /Ya calificaste/);
+  });
+
   it("informa cuántos días faltan para el evento si está confirmada", () => {
     const compra = crearCompra({
       estado: EstadoCompra.CONFIRMADA,
@@ -87,7 +117,8 @@ describe("Compra", () => {
 
     assert.equal(compra.diasRestantesParaEvento(HOY), 10);
 
-    compra.actualizarEstado(EstadoCompra.CANCELADA);
+    compra.tipoEntrada.reservar(compra.cantidad);
+    compra.cancelar({ hoy: HOY });
 
     assert.equal(compra.diasRestantesParaEvento(HOY), null);
   });

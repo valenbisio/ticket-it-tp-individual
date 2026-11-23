@@ -170,6 +170,28 @@ router
 
 /**
  * @swagger
+ * /api/usuarios/compras/{compraId}/confirmacion:
+ *   patch:
+ *     summary: Confirmar el pago de una compra pendiente (Organizador)
+ *     security: [{ bearerAuth: [] }]
+ *     tags: [Compras]
+ *     parameters:
+ *       - in: path
+ *         name: compraId
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200: { description: Compra confirmada }
+ *       403: { description: El usuario no organiza el evento }
+ *       404: { description: Compra no encontrada }
+ *       409: { description: La compra no está pendiente de pago }
+ */
+router
+  .route("/compras/:compraId/confirmacion")
+  .patch(autenticar, requerirRol("organizador"), (req, res, next) => compraController.confirmarPago(req, res, next));
+
+/**
+ * @swagger
  * /api/usuarios/{usuarioId}/compras/{compraId}/resenias:
  *   post:
  *     summary: Calificar un evento luego de utilizar la entrada

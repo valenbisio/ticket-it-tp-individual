@@ -19,6 +19,7 @@ function contexto({ estado = EstadoCompra.CONFIRMADA, fecha = new Date(Date.now(
     organizador: { id: "organizador-1" },
   });
   const compra = new Compra({ comprador: { id: "comprador-1" }, evento, tipoEntrada, cantidad: 1, estado });
+  tipoEntrada.reservar(compra.cantidad);
   const compraRepository = new CompraRepository({ compras: [compra] });
   const eventoRepository = new EventoRepository({ eventos: [evento] });
   return { compra, evento, tipoEntrada, service: new CompraService({ compraRepository, eventoRepository }) };
@@ -30,7 +31,7 @@ describe("nuevas operaciones de compras y eventos", () => {
     const compra = await service.realizarCompra(evento.id, "comprador-2", "General", 2);
     assert.equal(compra.cantidad, 2);
     assert.equal(compra.total, 200);
-    assert.equal(tipoEntrada.cupo, 1);
+    assert.equal(tipoEntrada.cupo, 0);
   });
 
   it("rechaza una compra que supera el cupo", async () => {
@@ -42,6 +43,22 @@ describe("nuevas operaciones de compras y eventos", () => {
     const { compra, service } = contexto();
     const resultado = await service.cancelarCompra(compra.id, "comprador-1");
     assert.equal(resultado.estado, EstadoCompra.CANCELADA);
+  });
+
+  it("permite al organizador confirmar una compra pendiente de pago", async () => {
+    const { compra, service } = contexto({ estado: EstadoCompra.PENDIENTE });
+
+    const resultado = await service.confirmarPago(compra.id, "organizador-1");
+
+    assert.equal(resultado.estado, EstadoCompra.CONFIRMADA);
+  });
+
+  it("rechaza confirmar pagos de otro organizador o compras que no están pendientes", async () => {
+    const pendiente = contexto({ estado: EstadoCompra.PENDIENTE });
+    const confirmada = contexto({ estado: EstadoCompra.CONFIRMADA });
+
+    await assert.rejects(pendiente.service.confirmarPago(pendiente.compra.id, "organizador-2"), /Solo el organizador/);
+    await assert.rejects(confirmada.service.confirmarPago(confirmada.compra.id, "organizador-1"), /pendientes de pago/);
   });
 
   it("permite enviar mensajes al comprador y al organizador", async () => {

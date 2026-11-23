@@ -212,11 +212,18 @@ export const AppProvider = ({ children }) => {
     return result;
   }, [loadEvents, showToast]);
 
+  const confirmPurchase = useCallback(async (purchaseId) => {
+    const result = await api.confirmPurchase(purchaseId);
+    await loadEvents();
+    showToast('Pago confirmado correctamente', 'success');
+    return result;
+  }, [loadEvents, showToast]);
+
   return (
     <AppContext.Provider value={{
       currentRole, setRole, currentUser, setUser, cerrarSesion, users: INITIAL_USERS,
       events, eventsLoading, loadEvents, purchases, loadPurchases, purchasesLoading,
-      conversations, loadConversations, unreadMessagesCount, lastChatMessage, buyTicket, markPurchaseUsed,
+      conversations, loadConversations, unreadMessagesCount, lastChatMessage, buyTicket, markPurchaseUsed, confirmPurchase,
       cancelPurchase, markPurchaseRated, activeQR, setActiveQR, toast, showToast, favorites,
       toggleFavorite, ready,
     }}>

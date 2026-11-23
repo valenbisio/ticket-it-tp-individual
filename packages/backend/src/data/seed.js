@@ -167,7 +167,7 @@ export const compraRepository = new CompraRepository({
 // Las compras demo reservan cupo como cualquier compra creada durante la sesión.
 for (const compra of compraRepository.obtenerTodas()) {
   if (![EstadoCompra.CANCELADA, EstadoCompra.REEMBOLSADA].includes(compra.estado)) {
-    compra.tipoEntrada.reducirCupo(compra.cantidad);
+    compra.tipoEntrada.reservar(compra.cantidad);
   }
 }
 

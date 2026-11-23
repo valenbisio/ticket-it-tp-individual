@@ -2,7 +2,6 @@ import { serializarCompras, serializarComprasDeEvento } from "../serializers/com
 import { Mensaje } from "../models/Mensaje.js";
 import { NotFoundError } from "../errors/NotFoundError.js";
 import { ConflictError } from "../errors/ConflictError.js";
-import { EstadoCompra } from "../models/EstadoCompra.js";
 import { Resenia } from "../models/Resenia.js";
 import { Compra } from "../models/Compra.js";
 import { ForbiddenError } from "../errors/ForbiddenError.js";
@@ -66,19 +65,7 @@ export class CompraService {
     );
     if (!tipoEntrada) throw new NotFoundError(`Tipo de entrada no encontrado: ${tipoEntradaNombre}`);
     const comprasEvento = this.compraRepository.obtenerPorEvento(eventoId);
-    const cantidadesActivas = comprasEvento
-      .filter((compra) => compra.tipoEntrada === tipoEntrada && compra.estado !== EstadoCompra.CANCELADA
-        && compra.estado !== EstadoCompra.REEMBOLSADA)
-      .reduce((total, compra) => total + compra.cantidad, 0);
-    const cupoDisponible = Math.max(0, Math.min(
-      tipoEntrada.cupo,
-      tipoEntrada.cupoTotal - cantidadesActivas,
-    ));
-    if (cupoDisponible < cantidad) {
-      throw new ConflictError("No hay suficiente cupo para este tipo de entrada");
-    }
-
-    tipoEntrada.reducirCupo(cantidad);
+    tipoEntrada.reservar(cantidad, comprasEvento);
     const compradorDatos = typeof comprador === "string"
       ? (this.usuarioRepository?.obtenerPorId(comprador) ?? { id: comprador })
       : comprador;
@@ -171,18 +158,17 @@ export class CompraService {
     if (compra.comprador?.id !== usuarioId) {
       throw new ConflictError("Solo el comprador puede cancelar esta compra");
     }
-    if (compra.estado === EstadoCompra.UTILIZADA) {
-      throw new ConflictError("No se puede cancelar una compra utilizada");
-    }
-    if (compra.estado === EstadoCompra.CANCELADA || compra.estado === EstadoCompra.REEMBOLSADA) {
-      throw new ConflictError("La compra ya no puede cancelarse");
-    }
-    if (!compra.evento?.fecha || new Date(compra.evento.fecha) <= new Date()) {
-      throw new ConflictError("No se puede cancelar una compra luego de realizado el evento");
-    }
+    compra.cancelar({ hoy: this.hoy ?? new Date() });
+    return compra;
+  }
 
-    compra.actualizarEstado(EstadoCompra.CANCELADA);
-    compra.tipoEntrada?.aumentarCupo(compra.cantidad);
+  async confirmarPago(compraId, organizadorId) {
+    const compra = await this.compraRepository.obtenerPorId(compraId);
+    if (!compra) throw new NotFoundError(`Compra no encontrada: ${compraId}`);
+    if (compra.evento?.organizador?.id !== organizadorId) {
+      throw new ForbiddenError("Solo el organizador del evento puede confirmar el pago");
+    }
+    compra.confirmarPago();
     return compra;
   }
 
@@ -192,24 +178,14 @@ export class CompraService {
     if (compra.evento?.organizador?.id !== organizadorId) {
       throw new ForbiddenError("Solo el organizador del evento puede validar la entrada");
     }
-    if (compra.estado !== EstadoCompra.CONFIRMADA) {
-      throw new ConflictError("Solo se pueden validar compras confirmadas");
-    }
-    compra.actualizarEstado(EstadoCompra.UTILIZADA);
+    compra.marcarComoUtilizada();
     return compra;
   }
 
   async calificarEvento(compraId, usuarioId, puntuacion, detalle) {
     const compra = await this.compraRepository.obtenerPorId(compraId);
     if (!compra) throw new NotFoundError(`Compra no encontrada: ${compraId}`);
-    if (compra.comprador?.id !== usuarioId) {
-      throw new ConflictError("Solo el comprador puede calificar esta compra");
-    }
-    if (compra.estado !== EstadoCompra.UTILIZADA) {
-      throw new ConflictError("Solo se puede calificar una entrada utilizada");
-    }
-    const yaCalifico = compra.evento.resenias.some((resenia) => resenia.comprador?.id === usuarioId);
-    if (yaCalifico) throw new ConflictError("Ya calificaste este evento. Podés consultar tu calificación desde Mis compras.");
+    compra.validarPuedeCalificarse(usuarioId);
     const resenia = new Resenia({
       comprador: compra.comprador,
       evento: compra.evento,

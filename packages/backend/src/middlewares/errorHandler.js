@@ -1,4 +1,5 @@
 import { AppError } from "../errors/AppError.js";
+import { ReglaDeNegocioError } from "../errors/ReglaDeNegocioError.js";
 
 
 
@@ -12,6 +13,15 @@ export function errorHandler(err, req , res, next){
     status: "error",
     message: `Id inválido: ${err.value}`,
     timestamp: new Date().toISOString(),
+        });
+    }
+
+    if (err instanceof ReglaDeNegocioError) {
+        return res.status(409).json({
+            status: "fail",
+            statusCode: 409,
+            message: err.message,
+            timestamp: new Date().toISOString(),
         });
     }
 

@@ -20,7 +20,7 @@ import { PurchaseListSkeleton } from '../components/common/LoadingSkeleton.jsx';
 export const OrganizerEventDetailScreen = () => {
   const { id } = useLocalSearchParams(); // eventId
   const router = useRouter();
-  const { events, markPurchaseUsed, showToast } = useApp();
+  const { events, markPurchaseUsed, confirmPurchase, showToast } = useApp();
 
   const event = useMemo(() => {
     return events.find((e) => e.id === id) || events[0];
@@ -31,6 +31,7 @@ export const OrganizerEventDetailScreen = () => {
   const [attendeesLoading, setAttendeesLoading] = useState(true);
   const [filterLoading, setFilterLoading] = useState(false);
   const [requestError, setRequestError] = useState('');
+  const [purchaseActionId, setPurchaseActionId] = useState(null);
   const [filterStatus, setFilterStatus] = useState('todas');
   const [eventReviews, setEventReviews] = useState([]);
   const [reviewsLoading, setReviewsLoading] = useState(true);
@@ -97,11 +98,26 @@ export const OrganizerEventDetailScreen = () => {
 
   const handleValidateEntry = async (purchaseId) => {
     try {
+      setPurchaseActionId(purchaseId);
       await markPurchaseUsed(purchaseId);
       showToast('Pase validado exitosamente en molinete', 'success');
       await loadAttendees();
     } catch (error) {
       showToast(error.message || 'No se pudo validar el pase', 'error');
+    } finally {
+      setPurchaseActionId(null);
+    }
+  };
+
+  const handleConfirmPayment = async (purchaseId) => {
+    try {
+      setPurchaseActionId(purchaseId);
+      await confirmPurchase(purchaseId);
+      await loadAttendees();
+    } catch (error) {
+      showToast(error.message || 'No se pudo confirmar el pago', 'error');
+    } finally {
+      setPurchaseActionId(null);
     }
   };
 
@@ -263,6 +279,9 @@ export const OrganizerEventDetailScreen = () => {
             ) : (
               filteredAttendees.map((att) => {
                 const canCheckIn = att.status === 'confirmada';
+                const isPending = att.status === 'pendiente de pago';
+                const isUsed = att.status === 'utilizada';
+                const isBusy = purchaseActionId === att.id;
 
                 return (
                   <View key={att.id} style={styles.attendeeCard}>
@@ -285,6 +304,7 @@ export const OrganizerEventDetailScreen = () => {
                       <Pressable
                         accessibilityRole="button"
                         accessibilityLabel={`Abrir chat con ${att.buyerName}`}
+                        accessibilityHint={`Abre el chat de la compra de ${att.tierName}`}
                         onPress={() => router.push(`/chat/${att.id}`)}
                         style={styles.attChatBtn}
                       >
@@ -292,21 +312,37 @@ export const OrganizerEventDetailScreen = () => {
                         <Text style={styles.attChatText}>Chat</Text>
                       </Pressable>
 
-                      {canCheckIn ? (
+                      {isPending ? (
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={`Confirmar pago de ${att.tierName} para ${att.buyerName}`}
+                          accessibilityHint="Confirma esta compra pendiente y habilita el check-in"
+                          accessibilityState={{ disabled: isBusy, busy: isBusy }}
+                          disabled={isBusy}
+                          onPress={() => handleConfirmPayment(att.id)}
+                          style={[styles.attActionBtn, isBusy && styles.attActionBtnDisabled]}
+                        >
+                          {isBusy ? <ActivityIndicator color={colors.onPrimary} size="small" /> : <Ionicons name="card-outline" size={16} color={colors.onPrimary} style={styles.actionBtnIcon} />}
+                          <Text style={styles.attCheckInText}>{isBusy ? 'Confirmando…' : 'Confirmar pago'}</Text>
+                        </Pressable>
+                      ) : canCheckIn ? (
                         <Pressable
                           accessibilityRole="button"
                           accessibilityLabel={`Validar entrada de ${att.buyerName}`}
+                          accessibilityHint="Marca la entrada como utilizada al realizar el check-in"
+                          accessibilityState={{ disabled: isBusy, busy: isBusy }}
+                          disabled={isBusy}
                           onPress={() => handleValidateEntry(att.id)}
-                          style={styles.attCheckInBtn}
+                          style={[styles.attActionBtn, isBusy && styles.attActionBtnDisabled]}
                         >
-                          <Ionicons name="checkmark-circle-outline" size={16} color={colors.onPrimary} style={styles.actionBtnIcon} />
-                          <Text style={styles.attCheckInText}>Validar Entrada (Check-in)</Text>
+                          {isBusy ? <ActivityIndicator color={colors.onPrimary} size="small" /> : <Ionicons name="checkmark-circle-outline" size={16} color={colors.onPrimary} style={styles.actionBtnIcon} />}
+                          <Text style={styles.attCheckInText}>{isBusy ? 'Validando…' : 'Validar Entrada (Check-in)'}</Text>
                         </Pressable>
-                      ) : (
+                      ) : isUsed ? (
                         <View style={styles.attDoneBox}>
-                          <Text style={styles.attDoneText}>✓ Validada</Text>
+                          <Text style={styles.attDoneText}>✓ Entrada utilizada</Text>
                         </View>
-                      )}
+                      ) : null}
                     </View>
                   </View>
                 );
@@ -588,7 +624,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.surfaceContainerHighest,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    minHeight: 44,
+    paddingVertical: 8,
     borderRadius: borderRadius.md,
   },
   attChatIcon: {
@@ -600,14 +637,18 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
   },
-  attCheckInBtn: {
+  attActionBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.primary,
-    paddingVertical: 6,
+    minHeight: 44,
+    paddingVertical: 8,
     borderRadius: borderRadius.md,
+  },
+  attActionBtnDisabled: {
+    opacity: 0.65,
   },
   attCheckInIcon: {
     fontSize: 12,

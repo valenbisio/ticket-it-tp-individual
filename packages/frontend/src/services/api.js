@@ -139,6 +139,7 @@ export const api = {
     return compraUI(result.compra);
   },
   async cancelPurchase(id) { return compraUI((await request(`/api/usuarios/${encodeURIComponent(currentUserId)}/compras/${encodeURIComponent(id)}`, { method: 'PATCH' })).compra); },
+  async confirmPurchase(id) { return compraUI((await request(`/api/usuarios/compras/${encodeURIComponent(id)}/confirmacion`, { method: 'PATCH' })).compra); },
   async markPurchaseUsed(id) { return compraUI((await request(`/api/usuarios/compras/${encodeURIComponent(id)}/uso`, { method: 'PATCH' })).compra); },
   async getChatMessages(id, userId) {
     const result = await request(`/api/usuarios/${encodeURIComponent(userId)}/compras/${encodeURIComponent(id)}/mensajes`);
