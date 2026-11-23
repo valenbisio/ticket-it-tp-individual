@@ -65,8 +65,31 @@ export default function RegisterScreen() {
         ))}
         <Text style={styles.label}>Contraseña</Text>
         <View style={styles.passwordRow}>
-          <TextInput accessibilityLabel="Contraseña" accessibilityState={{ invalid: !!errors.password }} autoComplete="new-password" textContentType="newPassword" autoCapitalize="none" secureTextEntry={!mostrarPassword} returnKeyType="done" value={form.password} onFocus={() => setCampoEnfocado('password')} onBlur={() => setCampoEnfocado(null)} onChangeText={(value) => update('password', value)} placeholder="Creá una contraseña" placeholderTextColor={colors.outline} style={[styles.input, styles.passwordInput, campoEnfocado === 'password' && styles.inputFocused, errors.password && styles.inputError]} />
-          <Pressable accessibilityRole="button" accessibilityLabel={mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'} accessibilityState={{ pressed: mostrarPassword }} onPress={() => setMostrarPassword((actual) => !actual)} style={styles.eyeButton}><PasswordVisibilityIcon visible={mostrarPassword} /><Text style={styles.eyeText}>{mostrarPassword ? 'Ocultar' : 'Ver'}</Text></Pressable>
+          <TextInput
+            accessibilityLabel="Contraseña"
+            accessibilityState={{ invalid: !!errors.password }}
+            autoComplete="new-password"
+            textContentType="newPassword"
+            autoCapitalize="none"
+            secureTextEntry={!mostrarPassword}
+            returnKeyType="done"
+            value={form.password}
+            onFocus={() => setCampoEnfocado('password')}
+            onBlur={() => setCampoEnfocado(null)}
+            onChangeText={(value) => update('password', value)}
+            placeholder="Creá una contraseña"
+            placeholderTextColor={colors.outline}
+            style={[styles.input, styles.passwordInput, campoEnfocado === 'password' && styles.inputFocused, errors.password && styles.inputError]}
+          />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+            accessibilityState={{ pressed: mostrarPassword }}
+            onPress={() => setMostrarPassword((actual) => !actual)}
+            style={({ pressed }) => [styles.eyeButton, pressed && styles.eyeButtonPressed]}
+          >
+            <PasswordVisibilityIcon visible={mostrarPassword} color={mostrarPassword ? colors.primary : colors.onSurfaceVariant} size={22} />
+          </Pressable>
         </View>
         <View accessibilityLabel="Requisitos de la contraseña" style={styles.requirements}>
           {requisitosPassword.map(({ label, cumple }) => <Text key={label} accessibilityLiveRegion="polite" style={[styles.requirement, cumple(form.password) && styles.requirementMet]}>{cumple(form.password) ? '✓' : '○'} {label}</Text>)}
@@ -95,7 +118,19 @@ const styles = StyleSheet.create({
   field: { marginBottom: spacing.xs }, label: { color: colors.onSurface, fontWeight: '700', marginBottom: spacing.xs, fontSize: 15 },
   input: { flex: 1, color: colors.onSurface, backgroundColor: colors.surfaceContainer, borderRadius: borderRadius.md, borderWidth: 1, borderColor: colors.outlineVariant, paddingHorizontal: spacing.md, minHeight: 52, fontSize: 16, marginBottom: spacing.sm }, inputFocused: { borderColor: colors.focus, borderWidth: 2 }, inputError: { borderColor: colors.error, borderWidth: 2 },
   error: { color: colors.error, marginTop: -spacing.xs, marginBottom: spacing.sm, fontSize: 14 },
-  passwordRow: { position: 'relative', justifyContent: 'center' }, passwordInput: { paddingRight: 72 }, eyeButton: { position: 'absolute', right: 4, height: 48, minWidth: 56, justifyContent: 'center', alignItems: 'center' }, eyeText: { color: colors.primary, fontWeight: '700' },
+  passwordRow: { position: 'relative', justifyContent: 'center' },
+  passwordInput: { paddingRight: 48 },
+  eyeButton: {
+    position: 'absolute',
+    right: 4,
+    top: 4,
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.full || 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  eyeButtonPressed: { opacity: 0.6, backgroundColor: colors.surfaceContainerHighest },
   requirements: { gap: 4, marginTop: -spacing.xs, marginBottom: spacing.md }, requirement: { color: colors.onSurfaceVariant, fontSize: 14 }, requirementMet: { color: colors.success, fontWeight: '700' },
   roles: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md }, role: { flex: 1, minHeight: 48, padding: spacing.md, borderWidth: 1, borderColor: colors.outlineVariant, borderRadius: borderRadius.md, alignItems: 'center', justifyContent: 'center' }, roleSelected: { borderColor: colors.primary, backgroundColor: colors.surfaceContainerHighest }, roleFocused: { borderColor: colors.focus, borderWidth: 2 }, roleText: { color: colors.onSurfaceVariant, fontWeight: '700' }, roleTextSelected: { color: colors.primary },
   button: { backgroundColor: colors.primary, borderRadius: borderRadius.md, padding: spacing.md, minHeight: 52, alignItems: 'center', justifyContent: 'center' }, buttonText: { color: colors.onPrimary, fontWeight: '800' }, linkRow: { flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: spacing.xs, marginTop: spacing.lg, minHeight: 72, paddingBottom: spacing.xs }, muted: { color: colors.onSurfaceVariant, textAlign: 'center' }, link: { color: colors.primary, fontWeight: '700', minHeight: 44, paddingHorizontal: spacing.md, textAlign: 'center', textAlignVertical: 'center' },
