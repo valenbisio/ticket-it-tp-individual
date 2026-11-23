@@ -14,32 +14,50 @@ import { useApp } from '../contexts/AppContext.jsx';
 import { Header } from '../components/common/Header.jsx';
 import { BottomTabBar } from '../components/common/BottomTabBar.jsx';
 import { colors, spacing, borderRadius } from '../data/theme.js';
-
-const CATEGORIES = ['Todas', 'Música', 'Teatro'];
+import { EventListSkeleton } from '../components/common/LoadingSkeleton.jsx';
+import { api } from '../services/api.js';
 
 export const ExploreEventsScreen = () => {
   const router = useRouter();
-  const { events, loadEvents, favorites, toggleFavorite, currentUser, showToast } = useApp();
+  const { events, loadEvents, currentUser, showToast } = useApp();
 
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Todas');
+  const [categories, setCategories] = useState(['Todas']);
   const [sortBy, setSortBy] = useState('fecha'); // 'fecha' | 'precio' | 'puntaje'
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      loadEvents({
-        q: search.trim(),
+    let activo = true;
+    api.getCategories().then((items) => {
+      if (activo) setCategories(['Todas', ...items.map((item) => item.nombre)]);
+    }).catch((error) => showToast(error.message || 'No se pudieron cargar las categorías', 'error'));
+    return () => { activo = false; };
+  }, [showToast]);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => setDebouncedSearch(search.trim()), 450);
+    return () => clearTimeout(timeout);
+  }, [search]);
+
+  useEffect(() => {
+    let activo = true;
+    setIsLoading(true);
+    const minimumSkeleton = new Promise((resolve) => setTimeout(resolve, 240));
+    Promise.all([loadEvents({
+        q: debouncedSearch,
         categoria: selectedCategory === 'Todas' ? undefined : selectedCategory,
         ordenarPor: sortBy,
-      }).catch((error) => showToast(error.message || 'No se pudieron buscar eventos', 'error'));
-    }, 250);
-    return () => clearTimeout(timeout);
-  }, [loadEvents, search, selectedCategory, sortBy, showToast]);
+      }), minimumSkeleton])
+      .catch((error) => showToast(error.message || 'No se pudieron buscar eventos', 'error'))
+      .finally(() => { if (activo) setIsLoading(false); });
+    return () => { activo = false; };
+  }, [loadEvents, debouncedSearch, selectedCategory, sortBy, showToast]);
 
   const renderEventCard = ({ item }) => {
     const minPrice = Math.min(...(item.tiers?.map((t) => t.price) || [0]));
-    const isFav = favorites.includes(item.id);
-    const totalRemaining = item.tiers?.reduce((acc, t) => acc + (t.totalQuota - t.soldCount), 0) || 0;
+    const totalRemaining = item.tiers?.reduce((acc, t) => acc + (t.availableQuota ?? (t.totalQuota - t.soldCount)), 0) || 0;
 
     return (
       <Pressable
@@ -58,17 +76,6 @@ export const ExploreEventsScreen = () => {
             <View style={styles.categoryBadge}>
               <Text style={styles.categoryBadgeText}>{item.category}</Text>
             </View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={isFav ? 'Quitar de favoritos' : 'Agregar a favoritos'}
-              onPress={(e) => {
-                e?.stopPropagation?.();
-                toggleFavorite(item.id);
-              }}
-              style={styles.favoriteButton}
-            >
-              <Text style={styles.favoriteIcon}>{isFav ? '❤️' : '🤍'}</Text>
-            </Pressable>
           </View>
 
           {/* Floating Date Badge */}
@@ -90,7 +97,7 @@ export const ExploreEventsScreen = () => {
           <View style={styles.metaRow}>
             <View style={styles.organizerRatingBox}>
               <Text style={styles.starIcon}>★</Text>
-              <Text style={styles.ratingNumber}>{item.organizerRating == null ? '—' : item.organizerRating.toFixed(1)}</Text>
+              <Text accessibilityLabel={item.eventRating == null ? 'Este evento todavía no tiene calificaciones' : `${item.eventRating.toFixed(1)} de 5 estrellas en ${item.eventReviewsCount} calificaciones`} style={styles.ratingNumber}>{item.eventRating == null ? '—' : item.eventRating.toFixed(1)}</Text>
               <Text style={styles.organizerName} numberOfLines={1}>
                 • {item.organizerName}
               </Text>
@@ -121,7 +128,7 @@ export const ExploreEventsScreen = () => {
 
       {/* Main List */}
       <FlatList
-        data={events}
+        data={isLoading ? [] : events}
         keyExtractor={(item) => item.id}
         renderItem={renderEventCard}
         contentContainerStyle={styles.listContainer}
@@ -132,20 +139,6 @@ export const ExploreEventsScreen = () => {
               <View>
                 <Text style={styles.greetingSmall}>Bienvenido de vuelta</Text>
                 <Text style={styles.greetingTitle}>¡Hola {currentUser.name}! 👋</Text>
-              </View>
-              <View style={styles.cityPill}>
-                <Text style={styles.cityText}>📍 Buenos Aires</Text>
-              </View>
-            </View>
-
-            {/* Smart Assistant Tip */}
-            <View style={styles.tipCard}>
-              <Text style={styles.tipIcon}>✨</Text>
-              <View style={styles.tipCol}>
-                <Text style={styles.tipTitle}>Smart Match AI</Text>
-                <Text style={styles.tipSubtitle}>
-                  Selección de festivales y shows con cupos disponibles hoy
-                </Text>
               </View>
             </View>
 
@@ -173,12 +166,13 @@ export const ExploreEventsScreen = () => {
               style={styles.categoriesScroll}
               contentContainerStyle={styles.categoriesContainer}
             >
-              {CATEGORIES.map((cat) => {
+              {categories.map((cat) => {
                 const isSelected = selectedCategory === cat;
                 return (
                   <Pressable
                     key={cat}
                     accessibilityRole="button"
+                    accessibilityState={{ selected: isSelected }}
                     accessibilityLabel={`Filtrar por categoría ${cat}`}
                     onPress={() => setSelectedCategory(cat)}
                     style={[styles.categoryChip, isSelected && styles.selectedCategoryChip]}
@@ -202,6 +196,7 @@ export const ExploreEventsScreen = () => {
               <View style={styles.sortButtonsRow}>
                 <Pressable
                   accessibilityRole="button"
+                  accessibilityState={{ selected: sortBy === 'fecha' }}
                   onPress={() => setSortBy('fecha')}
                   style={[styles.sortButton, sortBy === 'fecha' && styles.activeSortButton]}
                 >
@@ -211,6 +206,7 @@ export const ExploreEventsScreen = () => {
                 </Pressable>
                 <Pressable
                   accessibilityRole="button"
+                  accessibilityState={{ selected: sortBy === 'precio' }}
                   onPress={() => setSortBy('precio')}
                   style={[styles.sortButton, sortBy === 'precio' && styles.activeSortButton]}
                 >
@@ -220,6 +216,7 @@ export const ExploreEventsScreen = () => {
                 </Pressable>
                 <Pressable
                   accessibilityRole="button"
+                  accessibilityState={{ selected: sortBy === 'puntaje' }}
                   onPress={() => setSortBy('puntaje')}
                   style={[styles.sortButton, sortBy === 'puntaje' && styles.activeSortButton]}
                 >
@@ -232,7 +229,7 @@ export const ExploreEventsScreen = () => {
           </View>
         }
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
+          isLoading ? <EventListSkeleton /> : <View style={styles.emptyContainer}>
             <Text style={styles.emptyIcon}>🎭</Text>
             <Text style={styles.emptyTitle}>No se encontraron eventos</Text>
             <Text style={styles.emptySubtitle}>
@@ -272,7 +269,7 @@ const styles = StyleSheet.create({
   },
   greetingTitle: {
     color: colors.onSurface,
-    fontSize: 20,
+    fontSize: 26,
     fontWeight: '800',
   },
   cityPill: {

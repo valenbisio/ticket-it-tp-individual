@@ -84,7 +84,16 @@ SERVER_PORT=8000
 JWT_SECRET=reemplazar-por-un-secreto-aleatorio-de-al-menos-32-caracteres
 ```
 
-La API ofrece `POST /auth/registro`, `POST /auth/login` y `GET /auth/me`. Registro y login reciben/crean cuentas con rol `comprador` u `organizador` y devuelven `{ token, usuario }`; las rutas protegidas reciben `Authorization: Bearer <token>`. El token del frontend se conserva solo en memoria, así que al cerrar o recargar la app hay que iniciar sesión nuevamente. Como el backend también persiste en memoria, las cuentas registradas se reinician al reiniciar el servidor.
+La API ofrece `POST /auth/registro`, `POST /auth/login`, `GET /auth/me` y `PATCH /auth/perfil`. Registro y login devuelven `{ token, usuario }`; las rutas protegidas reciben `Authorization: Bearer <token>`. En Android/iOS, el token se conserva en SecureStore y se valida al abrir la app. En web queda solo en memoria durante la pestaña actual. Como el backend persiste en memoria, las cuentas registradas se reinician al reiniciar el servidor.
+
+#### Cuentas de demostración
+
+Todas usan la contraseña `demo1234`:
+
+- Comprador: `buyer@demo.local`
+- Organizador: `sala@demo.local`
+- Compradora: `lucia@demo.local`
+- Comprador: `martin@demo.local`
 
 ### 3. Ejecución de la Aplicación
 

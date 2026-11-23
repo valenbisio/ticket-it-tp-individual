@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
+  ActivityIndicator,
   View,
   Text,
   StyleSheet,
@@ -13,6 +14,7 @@ import { Header } from '../components/common/Header.jsx';
 import { StatusBadge } from '../components/common/StatusBadge.jsx';
 import { api } from '../services/api.js';
 import { colors, spacing, borderRadius } from '../data/theme.js';
+import { PurchaseListSkeleton } from '../components/common/LoadingSkeleton.jsx';
 
 export const OrganizerEventDetailScreen = () => {
   const { id } = useLocalSearchParams(); // eventId
@@ -24,16 +26,47 @@ export const OrganizerEventDetailScreen = () => {
   }, [events, id]);
 
   const [attendees, setAttendees] = useState([]);
+  const [tiers, setTiers] = useState([]);
+  const [attendeesLoading, setAttendeesLoading] = useState(true);
+  const [filterLoading, setFilterLoading] = useState(false);
+  const [requestError, setRequestError] = useState('');
   const [filterStatus, setFilterStatus] = useState('todas');
+  const [eventReviews, setEventReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [reviewsError, setReviewsError] = useState('');
 
-  const loadAttendees = async () => {
+  const loadAttendees = useCallback(async () => {
     if (!event) return;
-    const list = await api.getEventPurchases(event.id);
-    setAttendees(list);
-  };
+    setAttendeesLoading(true);
+    setRequestError('');
+    try {
+      const result = await api.getEventPurchases(event.id);
+      setAttendees(result.purchases);
+      setTiers(result.tiers);
+    } catch (error) {
+      setRequestError(error.message || 'No se pudieron cargar las compras.');
+    } finally {
+      setAttendeesLoading(false);
+    }
+  }, [event]);
 
   useEffect(() => {
-    loadAttendees();
+    void loadAttendees();
+  }, [loadAttendees]);
+
+  useEffect(() => {
+    if (!event) return;
+    let activo = true;
+    setReviewsLoading(true);
+    setReviewsError('');
+    api.getReviews(event.id).then((items) => {
+      if (activo) setEventReviews(items);
+    }).catch((error) => {
+      if (activo) setReviewsError(error.message || 'No se pudieron cargar las opiniones.');
+    }).finally(() => {
+      if (activo) setReviewsLoading(false);
+    });
+    return () => { activo = false; };
   }, [event]);
 
   if (!event) {
@@ -48,10 +81,10 @@ export const OrganizerEventDetailScreen = () => {
   let totalSold = 0;
   let totalQuota = 0;
   let totalRevenue = 0;
-  event.tiers?.forEach((t) => {
+  tiers.forEach((t) => {
     totalSold += t.soldCount || 0;
     totalQuota += t.totalQuota || 0;
-    totalRevenue += (t.soldCount || 0) * (t.price || 0);
+    totalRevenue += t.revenue ?? (t.soldCount || 0) * (t.price || 0);
   });
   const occupancyPercent = totalQuota > 0 ? Math.round((totalSold / totalQuota) * 100) : 0;
 
@@ -62,9 +95,19 @@ export const OrganizerEventDetailScreen = () => {
   });
 
   const handleValidateEntry = async (purchaseId) => {
-    await markPurchaseUsed(purchaseId);
-    showToast(`Pase validado exitosamente en molinete`, 'success');
-    loadAttendees();
+    try {
+      await markPurchaseUsed(purchaseId);
+      showToast('Pase validado exitosamente en molinete', 'success');
+      await loadAttendees();
+    } catch (error) {
+      showToast(error.message || 'No se pudo validar el pase', 'error');
+    }
+  };
+
+  const selectFilter = (status) => {
+    setFilterStatus(status);
+    setFilterLoading(true);
+    setTimeout(() => setFilterLoading(false), 240);
   };
 
   return (
@@ -84,7 +127,7 @@ export const OrganizerEventDetailScreen = () => {
         </View>
 
         {/* Global Sales Summary (Dual Metric Grid) */}
-        <View style={styles.metricsRow}>
+        {attendeesLoading ? <ActivityIndicator accessibilityLabel="Cargando métricas de ventas" color={colors.primary} /> : <View style={styles.metricsRow}>
           <View style={styles.metricCard}>
             <Text style={styles.metricLabel}>Total Recaudado</Text>
             <Text style={styles.metricValuePrice}>${totalRevenue.toLocaleString('es-AR')}</Text>
@@ -101,17 +144,17 @@ export const OrganizerEventDetailScreen = () => {
               />
             </View>
           </View>
-        </View>
+        </View>}
 
         {/* Desglose por Tipo de Entrada (Tiers) */}
         <View style={styles.sectionBlock}>
           <Text style={styles.sectionHeading}>Desglose por Tipo de Entrada</Text>
           <Text style={styles.sectionSub}>Cupos vendidos, disponibles y recaudación parcial</Text>
 
-          <View style={styles.tiersContainer}>
-            {event.tiers?.map((tier) => {
-              const remaining = tier.totalQuota - tier.soldCount;
-              const tierRevenue = tier.soldCount * tier.price;
+          {attendeesLoading ? <PurchaseListSkeleton /> : <View style={styles.tiersContainer}>
+            {tiers.map((tier) => {
+              const remaining = tier.availableQuota ?? (tier.totalQuota - tier.soldCount);
+              const tierRevenue = tier.revenue ?? (tier.soldCount * tier.price);
               const tierPercent =
                 tier.totalQuota > 0 ? Math.round((tier.soldCount / tier.totalQuota) * 100) : 0;
 
@@ -150,7 +193,24 @@ export const OrganizerEventDetailScreen = () => {
                 </View>
               );
             })}
-          </View>
+          </View>}
+        </View>
+
+        <View style={styles.sectionBlock}>
+          <Text style={styles.sectionHeading}>Opiniones de este evento</Text>
+          {reviewsLoading ? <ActivityIndicator accessibilityLabel="Cargando opiniones" color={colors.primary} /> : reviewsError ? (
+            <Text accessibilityRole="alert" style={styles.requestError}>{reviewsError}</Text>
+          ) : eventReviews.length === 0 ? (
+            <Text style={styles.sectionSub}>Todavía no hay opiniones para este evento.</Text>
+          ) : eventReviews.map((review, index) => (
+            <View key={`${review.usuarioId || 'asistente'}-${index}`} style={styles.reviewCard}>
+              <View style={styles.reviewHeader}>
+                <Text style={styles.reviewAuthor}>{review.buyerName || 'Comprador'}</Text>
+                <Text accessibilityLabel={`${review.rating} de 5 estrellas`} style={styles.reviewRating}>{'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</Text>
+              </View>
+              {!!review.comment && <Text style={styles.reviewComment}>{review.comment}</Text>}
+            </View>
+          ))}
         </View>
 
         {/* Lista de Compras Asociadas al Evento */}
@@ -166,10 +226,12 @@ export const OrganizerEventDetailScreen = () => {
 
           {/* Filter tabs */}
           <View style={styles.attendeeFilters}>
-            {['todas', 'confirmada', 'utilizada'].map((st) => (
+            {['todas', 'pendiente de pago', 'confirmada', 'utilizada', 'cancelada', 'reembolsada'].map((st) => (
               <Pressable
                 key={st}
-                onPress={() => setFilterStatus(st)}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: filterStatus === st }}
+                onPress={() => selectFilter(st)}
                 style={[styles.attendeeFilterPill, filterStatus === st && styles.activeFilterPill]}
               >
                 <Text
@@ -178,7 +240,7 @@ export const OrganizerEventDetailScreen = () => {
                     filterStatus === st && styles.activeFilterText,
                   ]}
                 >
-                  {st.charAt(0).toUpperCase() + st.slice(1)}
+                  {st === 'todas' ? 'Todas' : st.charAt(0).toUpperCase() + st.slice(1)}
                 </Text>
               </Pressable>
             ))}
@@ -186,7 +248,8 @@ export const OrganizerEventDetailScreen = () => {
 
           {/* Attendees List */}
           <View style={styles.attendeesList}>
-            {filteredAttendees.length === 0 ? (
+            {!!requestError && <Text accessibilityRole="alert" style={styles.requestError}>{requestError}</Text>}
+          {attendeesLoading || filterLoading ? <PurchaseListSkeleton /> : requestError ? null : filteredAttendees.length === 0 ? (
               <View style={styles.emptyAttendees}>
                 <Text style={styles.emptyAttText}>No hay compras con este filtro</Text>
               </View>
@@ -458,6 +521,12 @@ const styles = StyleSheet.create({
     color: colors.outline,
     fontSize: 12,
   },
+  requestError: { color: colors.error, marginVertical: spacing.sm },
+  reviewCard: { padding: spacing.sm, marginTop: spacing.sm, backgroundColor: colors.surfaceContainerHigh, borderRadius: borderRadius.md },
+  reviewHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  reviewAuthor: { color: colors.onSurface, fontWeight: '700' },
+  reviewRating: { color: colors.tertiary, fontWeight: '800' },
+  reviewComment: { color: colors.onSurfaceVariant, marginTop: spacing.xs, lineHeight: 20 },
   attendeeCard: {
     backgroundColor: colors.surfaceContainerHigh,
     borderRadius: borderRadius.md,

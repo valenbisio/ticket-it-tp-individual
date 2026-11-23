@@ -26,4 +26,12 @@ export class AuthController {
       return next(error);
     }
   };
+
+  actualizarPerfil = (req, res, next) => {
+    try {
+      return res.status(200).json(this.authService.actualizarPerfil(req.usuario.id, req.body));
+    } catch (error) {
+      return next(error);
+    }
+  };
 }

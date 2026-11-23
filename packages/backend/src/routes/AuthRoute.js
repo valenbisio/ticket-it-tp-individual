@@ -1,16 +1,11 @@
 import express from "express";
-import { scryptSync } from "node:crypto";
 import { AuthController } from "../controllers/AuthController.js";
-import { UsuarioRepository } from "../repositories/UsuarioRepository.js";
+import { usuarioRepository } from "../data/usuariosSeed.js";
 import { AuthService } from "../services/AuthService.js";
 import { validarSchema } from "../middlewares/validarSchema.js";
 import { crearAutenticacion } from "../middlewares/autenticacion.js";
-import { registroSchema, loginSchema } from "../schemas/authSchema.js";
+import { registroSchema, loginSchema, actualizarPerfilSchema } from "../schemas/authSchema.js";
 
-export const usuarioRepository = new UsuarioRepository();
-const passwordHashDemo = `ticket-it-demo:${scryptSync("demo1234", "ticket-it-demo", 64).toString("hex")}`;
-usuarioRepository.agregar({ id: "usuario-1", email: "comprador@ticketit.local", nombre: "Juan", apellido: "Pérez", rol: "comprador", passwordHash: passwordHashDemo });
-usuarioRepository.agregar({ id: "usuario-2", email: "organizador@ticketit.local", nombre: "Sala Norte", apellido: "Producciones", rol: "organizador", passwordHash: passwordHashDemo });
 export const authService = new AuthService({ usuarioRepository });
 const authController = new AuthController({ authService });
 export const { autenticar, requerirRol } = crearAutenticacion(authService);
@@ -73,5 +68,6 @@ router.post("/login", validarSchema(loginSchema), authController.login);
  *       401: { description: Token ausente, inválido o vencido }
  */
 router.get("/me", autenticar, authController.me);
+router.patch("/perfil", autenticar, validarSchema(actualizarPerfilSchema), authController.actualizarPerfil);
 
 export default router;

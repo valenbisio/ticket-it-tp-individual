@@ -43,6 +43,19 @@ export class AuthService {
     return { usuario: usuarioPublico(usuario) };
   }
 
+  actualizarPerfil(usuarioId, datos) {
+    const usuario = this.usuarioRepository.obtenerPorId(usuarioId);
+    if (!usuario) throw new UnauthorizedError("La sesión ya no es válida");
+    const usuarioConEmail = this.usuarioRepository.obtenerPorEmail(datos.email);
+    if (usuarioConEmail && usuarioConEmail.id !== usuarioId) {
+      throw new ConflictError("Ya existe una cuenta con ese email");
+    }
+    usuario.email = datos.email;
+    usuario.nombre = datos.nombre;
+    usuario.apellido = datos.apellido;
+    return { usuario: usuarioPublico(usuario) };
+  }
+
   verificarToken(token) {
     const [header, payload, firma] = token.split(".");
     if (!header || !payload || !firma) throw new UnauthorizedError("Token inválido");

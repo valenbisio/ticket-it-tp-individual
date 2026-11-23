@@ -1,7 +1,11 @@
 /* eslint-disable react/prop-types */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
+import { api } from '../services/api.js';
+
+const TOKEN_KEY = 'ticket-it.session-token';
 
 const AuthContext = createContext(null);
 let limpiarSesionActiva = null;
@@ -15,24 +19,29 @@ export function AuthProvider({ children }) {
 
     void (async () => {
       try {
-        const token = tokenEnMemoria;
+        const token = Platform.OS === 'web' ? null : await SecureStore.getItemAsync(TOKEN_KEY);
+        tokenEnMemoria = token;
         if (!token) {
           if (activo) setEstado(null);
           return;
         }
 
-        const response = await fetch(`${API_URL}/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!response.ok) {
+        let data;
+        try {
+          data = await api.restoreSession(token);
+        } catch {
           tokenEnMemoria = null;
+          api.setToken(null);
+          await SecureStore.deleteItemAsync(TOKEN_KEY);
           if (activo) setEstado(null);
           return;
         }
 
-        const data = await response.json();
+        api.setToken(token, data.usuario.id);
         if (activo) setEstado({ token, usuario: data.usuario });
       } catch {
+        tokenEnMemoria = null;
+        api.setToken(null);
         if (activo) setEstado(null);
       }
     })();
@@ -40,36 +49,44 @@ export function AuthProvider({ children }) {
     return () => { activo = false; };
   }, []);
 
-  const guardarSesion = useCallback(async (response) => {
-    const data = await response.json();
-    if (!response.ok || !data?.token || !data?.usuario) {
-      throw new Error(data?.message ?? 'No se pudo iniciar sesión');
+  const iniciarSesion = useCallback(async (email, password) => {
+    const data = await api.login(email, password);
+    try {
+      if (Platform.OS !== 'web') await SecureStore.setItemAsync(TOKEN_KEY, data.token);
+    } catch {
+      api.setToken(null);
+      throw new Error('No se pudo guardar la sesión de forma segura en este dispositivo.');
     }
     tokenEnMemoria = data.token;
     setEstado(data);
   }, []);
 
-  const iniciarSesion = useCallback(async (email, password) => {
-    const response = await fetch(`${API_URL}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-    await guardarSesion(response);
-  }, [guardarSesion]);
-
   const registrar = useCallback(async (datos) => {
-    const response = await fetch(`${API_URL}/auth/registro`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(datos),
-    });
-    await guardarSesion(response);
-  }, [guardarSesion]);
+    const data = await api.register(datos);
+    try {
+      if (Platform.OS !== 'web') await SecureStore.setItemAsync(TOKEN_KEY, data.token);
+    } catch {
+      api.setToken(null);
+      throw new Error('No se pudo guardar la sesión de forma segura en este dispositivo.');
+    }
+    tokenEnMemoria = data.token;
+    setEstado(data);
+  }, []);
+
+  const actualizarPerfil = useCallback(async (datos) => {
+    const usuario = await api.updateProfile(datos);
+    setEstado((actual) => actual ? { ...actual, usuario } : actual);
+    return usuario;
+  }, []);
 
   const cerrarSesion = useCallback(async () => {
     tokenEnMemoria = null;
-    setEstado(null);
+    api.setToken(null);
+    try {
+      if (Platform.OS !== 'web') await SecureStore.deleteItemAsync(TOKEN_KEY);
+    } finally {
+      setEstado(null);
+    }
   }, []);
 
   useEffect(() => {
@@ -80,8 +97,8 @@ export function AuthProvider({ children }) {
   }, [cerrarSesion]);
 
   const value = useMemo(
-    () => ({ estado, iniciarSesion, registrar, cerrarSesion }),
-    [estado, iniciarSesion, registrar, cerrarSesion],
+    () => ({ estado, iniciarSesion, registrar, actualizarPerfil, cerrarSesion }),
+    [estado, iniciarSesion, registrar, actualizarPerfil, cerrarSesion],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

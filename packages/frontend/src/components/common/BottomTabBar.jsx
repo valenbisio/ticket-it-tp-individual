@@ -16,6 +16,7 @@ export const BottomTabBar = () => {
   if (currentRole === 'buyer') {
     const isExplore = pathname.includes('explore') || pathname === '/' || pathname === '';
     const isPurchases = pathname.includes('purchases');
+    const isProfile = pathname.includes('profile');
 
     return (
       <View style={styles.tabBarContainer}>
@@ -54,17 +55,18 @@ export const BottomTabBar = () => {
           </Text>
         </Pressable>
 
-        {/* Tab 3: Cambiar Rol */}
+        {/* Tab 3: Perfil */}
         <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Cambiar de rol o usuario"
-          onPress={() => router.push('/')}
+          accessibilityRole="tab"
+          accessibilityLabel="Ver y editar perfil"
+          accessibilityState={{ selected: isProfile }}
+          onPress={() => router.push('/profile')}
           style={styles.tabItem}
         >
-          <View style={styles.iconBox}>
-            <Text style={styles.iconText}>👤</Text>
+          <View style={[styles.iconBox, isProfile && styles.activeIconBox]}>
+            <Text style={[styles.iconText, isProfile && styles.activeIconText]}>👤</Text>
           </View>
-          <Text style={styles.tabLabel}>Roles</Text>
+          <Text style={[styles.tabLabel, isProfile && styles.activeTabLabel]}>Perfil</Text>
         </Pressable>
       </View>
     );
@@ -73,6 +75,7 @@ export const BottomTabBar = () => {
   // Organizer bottom tabs
   const isEvents = pathname.includes('events');
   const isCreate = pathname.includes('create');
+  const isProfile = pathname.includes('profile');
 
   return (
     <View style={styles.tabBarContainer}>
@@ -106,17 +109,18 @@ export const BottomTabBar = () => {
         </Text>
       </Pressable>
 
-      {/* Tab 3: Cambiar Rol */}
+      {/* Tab 3: Perfil */}
       <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Cambiar de rol o usuario"
-        onPress={() => router.push('/')}
+        accessibilityRole="tab"
+        accessibilityLabel="Ver y editar perfil"
+        accessibilityState={{ selected: isProfile }}
+        onPress={() => router.push('/profile')}
         style={styles.tabItem}
       >
-        <View style={styles.iconBox}>
-          <Text style={styles.iconText}>👤</Text>
+        <View style={[styles.iconBox, isProfile && styles.activeIconBox]}>
+          <Text style={[styles.iconText, isProfile && styles.activeIconText]}>👤</Text>
         </View>
-        <Text style={styles.tabLabel}>Roles</Text>
+        <Text style={[styles.tabLabel, isProfile && styles.activeTabLabel]}>Perfil</Text>
       </Pressable>
     </View>
   );

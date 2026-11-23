@@ -10,6 +10,9 @@ import {
 import { CompraRepository } from "../repositories/CompraRepository.js";
 import { EventoRepository } from "../repositories/EventoRepository.js";
 import { CategoriaRepository } from "../repositories/CategoriaRepository.js";
+import { usuarioRepository } from "./usuariosSeed.js";
+
+export { usuarioRepository };
 
 /**
  * ID histórico del comprador de ejemplo incluido en las compras semilla.
@@ -40,16 +43,14 @@ function crearTiposEntrada({ precioGeneral, precioVip }) {
   ];
 }
 
-const comprador = new Usuario({
-  id: COMPRADOR_DEMO_ID,
-  nombre: "Valentina",
-  apellido: "Bisio",
-});
+const comprador = usuarioRepository.obtenerPorId(COMPRADOR_DEMO_ID);
+const compradorLucia = usuarioRepository.obtenerPorId("usuario-3");
+const compradorMartin = usuarioRepository.obtenerPorId("usuario-4");
 
 const organizador = new Usuario({
   id: "usuario-2",
-  nombre: "Productora",
-  apellido: "Demo",
+  nombre: "Sala Norte",
+  apellido: "Producciones",
 });
 
 const categoriaMusica = new Categoria({
@@ -61,6 +62,13 @@ const categoriaTeatro = new Categoria({
   nombre: "Teatro",
   descripcion: "Obras y espectáculos",
 });
+const categoriasAdicionales = [
+  new Categoria({ nombre: "Cine", descripcion: "Estrenos, ciclos y proyecciones" }),
+  new Categoria({ nombre: "Deportes", descripcion: "Partidos y competencias" }),
+  new Categoria({ nombre: "Comedia", descripcion: "Stand up y espectáculos de humor" }),
+  new Categoria({ nombre: "Gastronomía", descripcion: "Ferias, degustaciones y experiencias culinarias" }),
+  new Categoria({ nombre: "Arte y cultura", descripcion: "Exposiciones, museos y actividades culturales" }),
+];
 
 const recitalFuturo = new Evento({
   nombre: "Recital de Rock",
@@ -71,11 +79,11 @@ const recitalFuturo = new Evento({
   organizador,
 });
 
-const festivalDeHoy = new Evento({
+const festivalPasado = new Evento({
   nombre: "Festival de Jazz",
   descripcion: "Festival internacional de jazz",
   categoria: categoriaMusica,
-  fecha: fechaEnDias(0, { hora: 23 }),
+  fecha: fechaEnDias(-2),
   tiposEntrada: crearTiposEntrada({ precioGeneral: 9000, precioVip: 18000 }),
   organizador,
 });
@@ -90,22 +98,23 @@ const obraDeTeatroPasada = new Evento({
 });
 
 recitalFuturo.agregarResenia(new Resenia({ comprador, evento: recitalFuturo, puntuacion: 5, detalle: "Excelente puesta y sonido." }));
-recitalFuturo.agregarResenia(new Resenia({ comprador, evento: recitalFuturo, puntuacion: 4, detalle: "Muy buen recital." }));
-festivalDeHoy.agregarResenia(new Resenia({ comprador, evento: festivalDeHoy, puntuacion: 3, detalle: "Buena música, con algunos detalles." }));
+recitalFuturo.agregarResenia(new Resenia({ comprador: compradorLucia, evento: recitalFuturo, puntuacion: 4, detalle: "Muy buen recital." }));
+festivalPasado.agregarResenia(new Resenia({ comprador: compradorMartin, evento: festivalPasado, puntuacion: 3, detalle: "Buena música, con algunos detalles." }));
 obraDeTeatroPasada.agregarResenia(new Resenia({ comprador, evento: obraDeTeatroPasada, puntuacion: 2, detalle: "La obra podría mejorar." }));
 
 // Los routers comparten estas instancias para que las altas y compras
 // realizadas durante la ejecución vean los mismos objetos en memoria.
 export const eventoRepository = new EventoRepository({
-  eventos: [recitalFuturo, festivalDeHoy, obraDeTeatroPasada],
+  eventos: [recitalFuturo, festivalPasado, obraDeTeatroPasada],
 });
 export const categoriaRepository = new CategoriaRepository([
   categoriaMusica,
   categoriaTeatro,
+  ...categoriasAdicionales,
 ]);
 
 const [recitalGeneral, recitalVip] = recitalFuturo.tiposEntrada;
-const [festivalGeneral] = festivalDeHoy.tiposEntrada;
+const [festivalGeneral] = festivalPasado.tiposEntrada;
 const [teatroGeneral, teatroVip] = obraDeTeatroPasada.tiposEntrada;
 
 export const compraRepository = new CompraRepository({
@@ -118,7 +127,7 @@ export const compraRepository = new CompraRepository({
       estado: EstadoCompra.CONFIRMADA,
     }),
     new Compra({
-      comprador,
+      comprador: compradorLucia,
       evento: recitalFuturo,
       tipoEntrada: recitalVip,
       cantidad: 1,
@@ -126,27 +135,27 @@ export const compraRepository = new CompraRepository({
     }),
     new Compra({
       comprador,
-      evento: festivalDeHoy,
+      evento: festivalPasado,
       tipoEntrada: festivalGeneral,
       cantidad: 1,
-      estado: EstadoCompra.CONFIRMADA,
+      estado: EstadoCompra.UTILIZADA,
     }),
     new Compra({
-      comprador,
+      comprador: compradorMartin,
       evento: obraDeTeatroPasada,
       tipoEntrada: teatroGeneral,
       cantidad: 4,
       estado: EstadoCompra.UTILIZADA,
     }),
     new Compra({
-      comprador,
+      comprador: compradorLucia,
       evento: obraDeTeatroPasada,
       tipoEntrada: teatroVip,
       cantidad: 1,
       estado: EstadoCompra.CANCELADA,
     }),
     new Compra({
-      comprador,
+      comprador: compradorMartin,
       evento: obraDeTeatroPasada,
       tipoEntrada: teatroGeneral,
       cantidad: 1,
@@ -154,4 +163,11 @@ export const compraRepository = new CompraRepository({
     }),
   ],
 });
+
+// Las compras demo reservan cupo como cualquier compra creada durante la sesión.
+for (const compra of compraRepository.obtenerTodas()) {
+  if (![EstadoCompra.CANCELADA, EstadoCompra.REEMBOLSADA].includes(compra.estado)) {
+    compra.tipoEntrada.reducirCupo(compra.cantidad);
+  }
+}
 

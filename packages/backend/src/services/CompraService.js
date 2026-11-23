@@ -14,9 +14,10 @@ import { ForbiddenError } from "../errors/ForbiddenError.js";
  * El controller delega en este service todo lo que no sea HTTP.
  */
 export class CompraService {
-  constructor({ compraRepository, eventoRepository, hoy } = {}) {
+  constructor({ compraRepository, eventoRepository, usuarioRepository, hoy } = {}) {
     this.compraRepository = compraRepository;
     this.eventoRepository = eventoRepository;
+    this.usuarioRepository = usuarioRepository;
     this.hoy = hoy;
   }
 
@@ -77,7 +78,9 @@ export class CompraService {
     }
 
     tipoEntrada.reducirCupo(cantidad);
-    const compradorDatos = typeof comprador === "string" ? { id: comprador } : comprador;
+    const compradorDatos = typeof comprador === "string"
+      ? (this.usuarioRepository?.obtenerPorId(comprador) ?? { id: comprador })
+      : comprador;
     const compra = new Compra({
       comprador: compradorDatos,
       evento,
@@ -171,6 +174,8 @@ export class CompraService {
     if (compra.estado !== EstadoCompra.UTILIZADA) {
       throw new ConflictError("Solo se puede calificar una entrada utilizada");
     }
+    const yaCalifico = compra.evento.resenias.some((resenia) => resenia.comprador?.id === usuarioId);
+    if (yaCalifico) throw new ConflictError("Ya calificaste este evento. Podés consultar tu calificación desde Mis compras.");
     const resenia = new Resenia({
       comprador: compra.comprador,
       evento: compra.evento,

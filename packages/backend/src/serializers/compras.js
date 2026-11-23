@@ -33,6 +33,7 @@ export function serializarCompra(compra, hoy = new Date()) {
       nombre: compra.comprador?.nombre ?? null,
       apellido: compra.comprador?.apellido ?? null,
     },
+    hasRated: Boolean(compra.evento?.resenias?.some((resenia) => resenia.comprador?.id === compra.comprador?.id)),
     diasRestantesParaEvento: compra.diasRestantesParaEvento(hoy),
   };
 }
@@ -58,11 +59,22 @@ export function serializarComprasDeEvento(evento, compras, hoy = new Date()) {
             && compra.estado !== EstadoCompra.CANCELADA
             && compra.estado !== EstadoCompra.REEMBOLSADA)
           .reduce((total, compra) => total + compra.cantidad, 0);
+        const vendidas = compras
+          .filter((compra) => compra.tipoEntrada === tipo
+            && (compra.estado === EstadoCompra.CONFIRMADA || compra.estado === EstadoCompra.UTILIZADA))
+          .reduce((total, compra) => total + compra.cantidad, 0);
+        const recaudado = compras
+          .filter((compra) => compra.tipoEntrada === tipo
+            && (compra.estado === EstadoCompra.CONFIRMADA || compra.estado === EstadoCompra.UTILIZADA))
+          .reduce((total, compra) => total + compra.total, 0);
         return {
           nombre: tipo.nombre,
           descripcion: tipo.descripcion,
           precio: tipo.precio,
           cupoDisponible: Math.max(0, Math.min(tipo.cupo, tipo.cupoTotal - comprometidas)),
+          cupoTotal: tipo.cupoTotal,
+          vendidas,
+          recaudado,
         };
       }),
     },

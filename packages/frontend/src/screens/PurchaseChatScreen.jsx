@@ -7,6 +7,7 @@ import {
   TextInput,
   Pressable,
   Image,
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
@@ -22,28 +23,39 @@ export const PurchaseChatScreen = () => {
   const { purchases, currentUser, showToast } = useApp();
 
   const purchase = useMemo(() => {
-    return purchases.find((p) => p.id === id) || purchases[0];
+    return purchases.find((p) => p.id === id) || null;
   }, [purchases, id]);
 
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const flatListRef = useRef(null);
 
   useEffect(() => {
-    if (!purchase) return;
     const loadChat = async () => {
-      const msgs = await api.getChatMessages(purchase.id, currentUser.id);
-      setMessages(msgs);
+      setIsLoading(true);
+      setLoadError('');
+      try {
+        const msgs = await api.getChatMessages(id, currentUser.id);
+        setMessages(msgs);
+      } catch (error) {
+        const message = error.message || 'No se pudo cargar la conversación';
+        setLoadError(message);
+        showToast(message, 'error');
+      } finally {
+        setIsLoading(false);
+      }
     };
-    loadChat();
-  }, [purchase, currentUser.id]);
+    if (id) void loadChat();
+  }, [id, currentUser.id, showToast]);
 
   const handleSend = async () => {
     if (!inputText.trim()) return;
     try {
       setIsSending(true);
-      const newMsg = await api.sendChatMessage(purchase.id, currentUser.id, {
+      const newMsg = await api.sendChatMessage(id, currentUser.id, {
         senderId: currentUser.id,
         senderName: currentUser.name,
         senderRole: currentUser.role,
@@ -55,8 +67,8 @@ export const PurchaseChatScreen = () => {
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
       }, 100);
-    } catch {
-      showToast('Error al enviar el mensaje', 'error');
+    } catch (error) {
+      showToast(error.message || 'Error al enviar el mensaje', 'error');
     } finally {
       setIsSending(false);
     }
@@ -113,11 +125,17 @@ export const PurchaseChatScreen = () => {
       {/* Message List */}
       <FlatList
         ref={flatListRef}
-        data={messages}
+        data={isLoading ? [] : messages}
         keyExtractor={(item) => item.id}
         renderItem={renderMessageItem}
         contentContainerStyle={styles.messagesList}
-        ListEmptyComponent={
+        ListEmptyComponent={isLoading ? (
+          <View accessibilityRole="progressbar" accessibilityLabel="Cargando mensajes" style={styles.loadingMessages}>
+            <ActivityIndicator color={colors.primary} />
+          </View>
+        ) : loadError ? (
+          <View style={styles.emptyChat}><Text accessibilityRole="alert" style={styles.emptyChatTitle}>{loadError}</Text></View>
+        ) : (
           <View style={styles.emptyChat}>
             <Text style={styles.emptyChatEmoji}>💬</Text>
             <Text style={styles.emptyChatTitle}>Comienza la conversación</Text>
@@ -125,13 +143,13 @@ export const PurchaseChatScreen = () => {
               Consulta detalles del evento, accesos o dudas sobre tu entrada.
             </Text>
           </View>
-        }
+        )}
       />
 
       {/* Input Box */}
       <View style={styles.inputContainer}>
         <TextInput
-          placeholder="Escribe un mensaje al organizador..."
+          placeholder={currentUser.role === 'organizer' ? 'Escribí un mensaje al comprador...' : 'Escribí un mensaje al organizador...'}
           placeholderTextColor={colors.outline}
           value={inputText}
           onChangeText={setInputText}
@@ -141,6 +159,8 @@ export const PurchaseChatScreen = () => {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Enviar mensaje"
+          accessibilityHint="Envía el mensaje escrito"
+          accessibilityState={{ disabled: !inputText.trim() || isSending, busy: isSending }}
           disabled={!inputText.trim() || isSending}
           onPress={handleSend}
           style={({ pressed }) => [
@@ -149,7 +169,11 @@ export const PurchaseChatScreen = () => {
             pressed && styles.sendButtonPressed,
           ]}
         >
-          <Text style={styles.sendIcon}>➤</Text>
+          {isSending ? (
+            <ActivityIndicator color={colors.onPrimary} />
+          ) : (
+            <Text style={styles.sendIcon}>➤</Text>
+          )}
         </Pressable>
       </View>
     </KeyboardAvoidingView>
@@ -311,9 +335,9 @@ const styles = StyleSheet.create({
     maxHeight: 90,
   },
   sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
@@ -321,15 +345,15 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     backgroundColor: colors.surfaceContainerHighest,
-    opacity: 0.5,
   },
   sendButtonPressed: {
     opacity: 0.8,
   },
   sendIcon: {
     color: colors.onPrimary,
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: 'bold',
   },
+  loadingMessages: { paddingTop: spacing.xl, alignItems: 'center' },
 });
 export default PurchaseChatScreen;

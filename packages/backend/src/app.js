@@ -19,7 +19,7 @@ app.use(
       : true,
   }),
 );
-app.use(express.json());
+app.use(express.json({ limit: "5mb" }));
 
 // Documentación
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));

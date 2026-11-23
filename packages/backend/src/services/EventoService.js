@@ -2,11 +2,13 @@ import { BadRequestError } from "../errors/BadRequestError.js";
 import { NotFoundError } from "../errors/NotFoundError.js";
 import { Evento, TipoEntrada } from "../models/index.js";
 import { normalizar } from "../utils/texto.js";
+import { EstadoCompra } from "../models/EstadoCompra.js";
 
 export class EventoService {
-  constructor({ eventoRepository, categoriaRepository }) {
+  constructor({ eventoRepository, categoriaRepository, compraRepository = null }) {
     this.eventoRepository = eventoRepository;
     this.categoriaRepository = categoriaRepository;
+    this.compraRepository = compraRepository;
   }
 
   async obtenerCategorias() {
@@ -49,6 +51,7 @@ export class EventoService {
     const palabras = texto ? normalizar(texto).split(/\s+/).filter(Boolean) : [];
 
     const eventosDisponibles = await this.eventoRepository.obtenerTodas();
+    const compras = this.compraRepository?.obtenerTodas() ?? [];
     const eventos = eventosDisponibles
       .filter((evento) => {
         if (categoriaBuscada && evento.categoria.id !== categoriaBuscada.id) {
@@ -71,6 +74,8 @@ export class EventoService {
       .map((evento) => this.#serializar(
         evento,
         this.#calcularPuntajeOrganizador(evento.organizador.id, eventosDisponibles),
+        compras,
+        eventosDisponibles,
       ));
 
     return this.#ordenarEventos(eventos, ordenarPor, orden);
@@ -83,6 +88,7 @@ export class EventoService {
     }
     return evento.resenias.map((resenia) => ({
       usuarioId: resenia.comprador?.id ?? null,
+      nombre: resenia.comprador?.nombre ?? null,
       puntuacion: resenia.puntuacion,
       detalle: resenia.detalle,
     }));
@@ -99,8 +105,11 @@ export class EventoService {
     return encontrada;
   }
 
-  #serializar(evento, puntajeOrganizador) {
+  #serializar(evento, puntajeOrganizador, compras = [], todosEventos = [evento]) {
     const precios = evento.tiposEntrada.map((t) => t.precio);
+    const cantidadReseniasOrganizador = todosEventos
+      .filter((otroEvento) => otroEvento.organizador.id === evento.organizador.id)
+      .reduce((total, otroEvento) => total + otroEvento.resenias.length, 0);
     return {
       id: evento.id,
       nombre: evento.nombre,
@@ -112,14 +121,24 @@ export class EventoService {
       portada: evento.multimedia[0] ?? null,
       organizador: `${evento.organizador.nombre} ${evento.organizador.apellido}`,
       organizadorId: evento.organizador.id,
+      cantidadReseniasOrganizador,
       precioDesde: precios.length > 0 ? Math.min(...precios) : null,
-      tiposEntrada: evento.tiposEntrada.map((tipo) => ({
-        nombre: tipo.nombre,
-        descripcion: tipo.descripcion,
-        precio: tipo.precio,
-        cupo: tipo.cupo,
-        cupoTotal: tipo.cupoTotal,
-      })),
+      tiposEntrada: evento.tiposEntrada.map((tipo) => {
+        const comprasTipo = compras.filter((compra) => compra.evento === evento && compra.tipoEntrada === tipo);
+        const comprasReservadas = comprasTipo.filter((compra) => ![EstadoCompra.CANCELADA, EstadoCompra.REEMBOLSADA].includes(compra.estado));
+        const comprasVendidas = comprasTipo.filter((compra) => [EstadoCompra.CONFIRMADA, EstadoCompra.UTILIZADA].includes(compra.estado));
+        const vendidas = comprasVendidas.reduce((total, compra) => total + compra.cantidad, 0);
+        const reservadas = comprasReservadas.reduce((total, compra) => total + compra.cantidad, 0);
+        return {
+          nombre: tipo.nombre,
+          descripcion: tipo.descripcion,
+          precio: tipo.precio,
+          cupo: Math.max(0, tipo.cupoTotal - reservadas),
+          cupoTotal: tipo.cupoTotal,
+          vendidas,
+          recaudado: comprasVendidas.reduce((total, compra) => total + compra.total, 0),
+        };
+      }),
       puntajeOrganizador,
       resenias: evento.resenias.map((resenia) => ({
         usuarioId: resenia.comprador?.id ?? null,

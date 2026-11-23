@@ -19,7 +19,9 @@ export const colors = {
   onSurface: '#dae2fd',
   onSurfaceVariant: '#c7c4d7',
   outline: '#908fa0',
-  outlineVariant: '#464554',
+  // Borde accesible sobre los fondos de superficie oscuros (contraste >= 3:1).
+  outlineVariant: '#77778d',
+  focus: '#4cd7f6',
 
   // Primary brand (Electric lavender / violet)
   primary: '#c0c1ff',

@@ -5,16 +5,16 @@ import { EventoController } from "../controllers/EventoController.js";
 import { CompraService } from "../services/CompraService.js";
 import { EventoService } from "../services/EventoService.js";
 
-import { compraRepository, eventoRepository, categoriaRepository } from "../data/seed.js";
+import { compraRepository, eventoRepository, categoriaRepository, usuarioRepository } from "../data/seed.js";
 import { validarQuerySchema, validarSchema } from "../middlewares/validarSchema.js";
 import { crearEventoSchema } from "../schemas/eventoSchema.js";
 import { crearCompraSchema } from "../schemas/compraSchema.js";
 import { busquedaEventoSchema } from "../schemas/busquedaEventoSchema.js";
 import { autenticar, requerirRol } from "./AuthRoute.js";
 
-const compraService = new CompraService({ compraRepository, eventoRepository });
+const compraService = new CompraService({ compraRepository, eventoRepository, usuarioRepository });
 const compraController = new CompraController({ compraService });
-const eventoService = new EventoService({ eventoRepository, categoriaRepository });
+const eventoService = new EventoService({ eventoRepository, categoriaRepository, compraRepository });
 const eventoController = new EventoController({ eventoService });
 
 const router = express.Router();
@@ -223,6 +223,6 @@ router
 router
   .route("/:eventoId/resenias")
   // Flujo 10: comprador consulta reseñas antes de comprar.
-  .get(autenticar, requerirRol("comprador"), (req, res, next) => eventoController.obtenerResenias(req, res, next));
+  .get(autenticar, requerirRol("comprador", "organizador"), (req, res, next) => eventoController.obtenerResenias(req, res, next));
 
 export default router;

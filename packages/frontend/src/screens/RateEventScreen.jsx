@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
+  ActivityIndicator,
   TextInput,
   Pressable,
   ScrollView,
@@ -16,15 +17,36 @@ import { colors, spacing, borderRadius } from '../data/theme.js';
 export const RateEventScreen = () => {
   const { id } = useLocalSearchParams(); // purchaseId
   const router = useRouter();
-  const { purchases, currentUser, showToast } = useApp();
+  const { purchases, showToast, currentUser, loadPurchases, markPurchaseRated } = useApp();
 
   const purchase = useMemo(() => {
-    return purchases.find((p) => p.id === id) || purchases[0];
+    return purchases.find((p) => p.id === id) || null;
   }, [purchases, id]);
+  const eventId = purchase?.eventId;
 
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [existingReview, setExistingReview] = useState(null);
+  const [checkingReview, setCheckingReview] = useState(true);
+
+  useEffect(() => {
+    let activo = true;
+    if (!eventId) { setCheckingReview(false); return () => { activo = false; }; }
+    setCheckingReview(true);
+    api.getReviews(eventId).then((reviews) => {
+      const review = reviews.find((item) => item.usuarioId === currentUser.id);
+      if (activo && review) {
+        setExistingReview(review);
+        setRating(review.rating);
+        setComment(review.comment || '');
+      }
+    }).catch((error) => {
+      if (activo) showToast(error.message || 'No se pudo consultar tu calificación', 'error');
+    }).finally(() => { if (activo) setCheckingReview(false); });
+    return () => { activo = false; };
+  }, [eventId, currentUser.id, showToast]);
 
   const handleSendRating = async () => {
     if (!purchase) return;
@@ -35,15 +57,14 @@ export const RateEventScreen = () => {
         eventId: purchase.eventId,
         eventName: purchase.eventName,
         organizerId: purchase.organizerId,
-        buyerName: currentUser.name,
-        buyerAvatar: currentUser.avatar,
         rating,
         comment: comment.trim(),
       });
-      showToast('¡Gracias por tu reseña! Tu opinión ayuda a la comunidad.', 'success');
-      router.replace('/(buyer)/purchases');
-    } catch {
-      showToast('Error al enviar la calificación', 'error');
+      markPurchaseRated(purchase.id);
+      setSubmitted(true);
+      void loadPurchases().catch((error) => showToast(error.message || 'No se pudo actualizar Mis compras', 'error'));
+    } catch (error) {
+      showToast(error.message || 'No se pudo enviar la calificación. Probá nuevamente.', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -54,6 +75,23 @@ export const RateEventScreen = () => {
       <Header title="Calificar Evento" showBack onBack={() => router.back()} />
 
       <ScrollView contentContainerStyle={styles.content}>
+        {checkingReview ? <View accessibilityRole="progressbar" accessibilityLabel="Consultando tu calificación" style={styles.successCard}><ActivityIndicator color={colors.primary} /></View> : existingReview ? (
+          <View accessibilityRole="summary" style={styles.successCard}>
+            <Text accessibilityRole="header" style={styles.successTitle}>Tu calificación</Text>
+            <Text accessibilityLabel={`${existingReview.rating} de 5 estrellas`} style={styles.reviewStars}>{'★'.repeat(existingReview.rating)}{'☆'.repeat(5 - existingReview.rating)}</Text>
+            {existingReview.comment ? <Text style={styles.successText}>{existingReview.comment}</Text> : <Text style={styles.successText}>No agregaste un comentario.</Text>}
+            <Pressable accessibilityRole="button" onPress={() => router.replace('/(buyer)/purchases')} style={styles.submitButton}><Text style={styles.submitButtonText}>Volver a mis compras</Text></Pressable>
+          </View>
+        ) : submitted ? (
+          <View accessibilityRole="alert" style={styles.successCard}>
+            <Text style={styles.successIcon}>✓</Text>
+            <Text style={styles.successTitle}>¡Reseña enviada!</Text>
+            <Text style={styles.successText}>Gracias por compartir tu experiencia.</Text>
+            <Pressable accessibilityRole="button" onPress={() => router.replace('/(buyer)/purchases')} style={styles.submitButton}>
+              <Text style={styles.submitButtonText}>Volver a mis compras</Text>
+            </Pressable>
+          </View>
+        ) : <>
         {purchase && (
           <View style={styles.eventCard}>
             <Text style={styles.eventLabel}>Calificando experiencia de:</Text>
@@ -102,7 +140,7 @@ export const RateEventScreen = () => {
 
         {/* Comment field */}
         <View style={styles.commentCard}>
-          <Text style={styles.commentLabel}>Comentario</Text>
+          <Text style={styles.commentLabel}>Comentario (opcional)</Text>
           <TextInput
             placeholder="Comparte detalles sobre el sonido, organización, ingreso ágil con QR, etc..."
             placeholderTextColor={colors.outline}
@@ -126,10 +164,9 @@ export const RateEventScreen = () => {
             pressed && styles.btnPressed,
           ]}
         >
-          <Text style={styles.submitButtonText}>
-            {isSubmitting ? 'Enviando...' : 'Enviar Calificación'}
-          </Text>
+          {isSubmitting ? <ActivityIndicator color={colors.onPrimary} accessibilityLabel="Enviando reseña" /> : <Text style={styles.submitButtonText}>Enviar calificación</Text>}
         </Pressable>
+        </>}
       </ScrollView>
     </View>
   );
@@ -239,6 +276,7 @@ const styles = StyleSheet.create({
   submitButton: {
     backgroundColor: colors.primary,
     paddingVertical: 14,
+    paddingHorizontal: spacing.lg,
     borderRadius: borderRadius.md,
     alignItems: 'center',
     marginTop: spacing.sm,
@@ -251,6 +289,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
   },
+  successCard: { backgroundColor: colors.surfaceContainerHigh, borderRadius: borderRadius.lg, padding: spacing.lg, alignItems: 'center', gap: spacing.sm },
+  successIcon: { color: colors.success, fontSize: 42, fontWeight: '800' },
+  successTitle: { color: colors.onSurface, fontSize: 20, fontWeight: '800' },
+  successText: { color: colors.onSurfaceVariant, fontSize: 14, textAlign: 'center' },
+  reviewStars: { color: colors.tertiary, fontSize: 28, fontWeight: '800' },
   btnPressed: {
     opacity: 0.8,
   },

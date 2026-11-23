@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useApp } from '../contexts/AppContext.jsx';
@@ -7,13 +7,20 @@ import { BottomTabBar } from '../components/common/BottomTabBar.jsx';
 import { StatusBadge } from '../components/common/StatusBadge.jsx';
 import { colors, spacing, borderRadius } from '../data/theme.js';
 import { getDaysUntilEvent, getDaysLabel, canCancelPurchase } from '../utils/purchases.js';
+import { PurchaseListSkeleton } from '../components/common/LoadingSkeleton.jsx';
 
 const STATUS_TABS = ['Todas', 'Confirmadas', 'Pendientes', 'Utilizadas', 'Canceladas', 'Reembolsadas'];
 
 export const MyPurchasesScreen = () => {
   const router = useRouter();
-  const { purchases, setActiveQR, currentUser, cancelPurchase } = useApp();
+  const { purchases, purchasesLoading, setActiveQR, currentUser, cancelPurchase } = useApp();
   const [selectedTab, setSelectedTab] = useState('Todas');
+  const [filterLoading, setFilterLoading] = useState(false);
+  useEffect(() => {
+    setFilterLoading(true);
+    const timeout = setTimeout(() => setFilterLoading(false), 220);
+    return () => clearTimeout(timeout);
+  }, [selectedTab]);
 
   // Filter purchases by tab
   const filteredPurchases = useMemo(() => {
@@ -105,17 +112,18 @@ export const MyPurchasesScreen = () => {
           {isUsed && (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={`Calificar evento ${item.eventName}`}
+              accessibilityLabel={item.hasRated ? `Ver mi calificación de ${item.eventName}` : `Calificar evento ${item.eventName}`}
+              accessibilityHint={item.hasRated ? 'Abre la calificación que ya enviaste' : 'Permite puntuar el evento y dejar un comentario opcional'}
               onPress={() => router.push(`/(buyer)/rate/${item.id}`)}
               style={({ pressed }) => [
                 styles.rateActionBtn,
-                item.hasRated && styles.alreadyRatedBtn,
+                item.hasRated && styles.ratedActionBtn,
                 pressed && styles.btnPressed,
               ]}
             >
-              <Text style={styles.rateActionIcon}>★</Text>
-              <Text style={styles.rateActionText}>
-                {item.hasRated ? 'Calificado' : 'Calificar Evento'}
+              <Text accessibilityElementsHidden importantForAccessibility="no" style={[styles.rateActionIcon, item.hasRated && styles.ratedActionText]}>★</Text>
+              <Text style={[styles.rateActionText, item.hasRated && styles.ratedActionText]}>
+                {item.hasRated ? 'Ver mi calificación' : 'Calificar Evento'}
               </Text>
             </Pressable>
           )}
@@ -166,6 +174,7 @@ export const MyPurchasesScreen = () => {
             return (
               <Pressable
                 accessibilityRole="button"
+                accessibilityState={{ selected: isSelected }}
                 onPress={() => setSelectedTab(item)}
                 style={[styles.tabPill, isSelected && styles.selectedTabPill]}
               >
@@ -180,12 +189,12 @@ export const MyPurchasesScreen = () => {
 
       {/* Purchases List */}
       <FlatList
-        data={filteredPurchases}
+        data={purchasesLoading || filterLoading ? [] : filteredPurchases}
         keyExtractor={(item) => item.id}
         renderItem={renderPurchaseItem}
         contentContainerStyle={styles.listContainer}
         ListEmptyComponent={
-          <View style={styles.emptyCenter}>
+          purchasesLoading || filterLoading ? <PurchaseListSkeleton /> : <View style={styles.emptyCenter}>
             <Text style={styles.emptyEmoji}>🎟️</Text>
             <Text style={styles.emptyTitle}>No tienes compras en este estado</Text>
             <Text style={styles.emptySubtitle}>
@@ -356,10 +365,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.tertiaryContainer,
     paddingVertical: 9,
+    paddingHorizontal: spacing.sm,
+    minHeight: 48,
     borderRadius: borderRadius.md,
   },
-  alreadyRatedBtn: {
-    backgroundColor: colors.surfaceContainerHighest,
+  ratedActionBtn: {
+    backgroundColor: colors.primary,
   },
   rateActionIcon: {
     fontSize: 13,
@@ -368,9 +379,10 @@ const styles = StyleSheet.create({
   },
   rateActionText: {
     color: colors.onTertiary,
-    fontSize: 11,
+    fontSize: 14,
     fontWeight: '800',
   },
+  ratedActionText: { color: colors.onPrimary },
   chatActionBtn: {
     flex: 1,
     flexDirection: 'row',

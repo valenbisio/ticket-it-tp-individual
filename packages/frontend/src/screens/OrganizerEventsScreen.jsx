@@ -5,17 +5,21 @@ import { useApp } from '../contexts/AppContext.jsx';
 import { Header } from '../components/common/Header.jsx';
 import { BottomTabBar } from '../components/common/BottomTabBar.jsx';
 import { colors, spacing, borderRadius } from '../data/theme.js';
+import { EventListSkeleton } from '../components/common/LoadingSkeleton.jsx';
 
 export const OrganizerEventsScreen = () => {
   const router = useRouter();
-  const { events, currentUser } = useApp();
+  const { events, currentUser, eventsLoading } = useApp();
 
   // Organizer events
   const organizerEvents = useMemo(() => {
-    return events.filter(
-      (e) => e.organizerId === currentUser.id || currentUser.role === 'organizer'
-    );
+    return events.filter((event) => event.organizerId === currentUser.id);
   }, [events, currentUser]);
+  const organizerRating = organizerEvents[0]?.organizerRating ?? null;
+  const organizerReviewsCount = organizerEvents[0]?.organizerReviewsCount ?? 0;
+  const organizerRatingLabel = organizerRating == null
+    ? 'Sin reseñas'
+    : `${organizerReviewsCount} ${organizerReviewsCount === 1 ? 'reseña' : 'reseñas'}`;
 
   // Overall KPIs
   const totalStats = useMemo(() => {
@@ -26,7 +30,7 @@ export const OrganizerEventsScreen = () => {
       e.tiers?.forEach((t) => {
         sold += t.soldCount || 0;
         totalCap += t.totalQuota || 0;
-        revenue += (t.soldCount || 0) * (t.price || 0);
+        revenue += t.revenue ?? (t.soldCount || 0) * (t.price || 0);
       });
     });
     return { revenue, sold, totalCap };
@@ -40,7 +44,7 @@ export const OrganizerEventsScreen = () => {
     item.tiers?.forEach((t) => {
       eventSold += t.soldCount || 0;
       eventTotalQuota += t.totalQuota || 0;
-      eventRevenue += (t.soldCount || 0) * (t.price || 0);
+      eventRevenue += t.revenue ?? (t.soldCount || 0) * (t.price || 0);
     });
 
     const percent = eventTotalQuota > 0 ? Math.round((eventSold / eventTotalQuota) * 100) : 0;
@@ -102,7 +106,7 @@ export const OrganizerEventsScreen = () => {
     <View style={styles.screen}>
       <Header subtitle="Panel del Organizador" />
 
-      <FlatList
+      {eventsLoading ? <EventListSkeleton /> : <FlatList
         data={organizerEvents}
         keyExtractor={(item) => item.id}
         renderItem={renderEventItem}
@@ -118,8 +122,8 @@ export const OrganizerEventsScreen = () => {
                 </View>
                 <View style={styles.reputationPill}>
                   <Text style={styles.repStar}>★</Text>
-                  <Text style={styles.repScore}>4.9</Text>
-                  <Text style={styles.repLabel}>Excelente</Text>
+                  <Text style={styles.repScore}>{organizerRating == null ? '—' : organizerRating.toFixed(1)}</Text>
+                  <Text style={styles.repLabel}>{organizerRatingLabel}</Text>
                 </View>
               </View>
 
@@ -155,7 +159,7 @@ export const OrganizerEventsScreen = () => {
             </View>
           </View>
         }
-      />
+      />}
 
       <BottomTabBar />
     </View>

@@ -7,6 +7,7 @@ import {
   Pressable,
   Image,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useApp } from '../contexts/AppContext.jsx';
@@ -17,7 +18,7 @@ import { colors, spacing, borderRadius } from '../data/theme.js';
 export const EventDetailScreen = () => {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const { events, buyTicket, favorites, toggleFavorite, showToast } = useApp();
+  const { events, buyTicket, showToast } = useApp();
 
   const event = useMemo(() => {
     return events.find((e) => e.id === id) || events[0];
@@ -29,7 +30,7 @@ export const EventDetailScreen = () => {
   const [quantity, setQuantity] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmedPurchase, setConfirmedPurchase] = useState(null);
-  const { reviews } = useReviews(event?.id);
+  const { reviews, loading: reviewsLoading, error: reviewsError } = useReviews(event?.id);
 
   if (!event) {
     return (
@@ -40,10 +41,9 @@ export const EventDetailScreen = () => {
   }
 
   const selectedTier = event.tiers?.find((t) => t.id === selectedTierId) || event.tiers?.[0];
-  const availableQuota = selectedTier ? selectedTier.totalQuota - selectedTier.soldCount : 0;
+  const availableQuota = selectedTier ? (selectedTier.availableQuota ?? selectedTier.totalQuota - selectedTier.soldCount) : 0;
   const totalPrice = (selectedTier?.price || 0) * quantity;
   const isSoldOut = availableQuota <= 0;
-  const isFav = favorites.includes(event.id);
 
   const handlePurchase = async () => {
     if (isSoldOut) {
@@ -79,14 +79,6 @@ export const EventDetailScreen = () => {
             <View style={styles.categoryBadge}>
               <Text style={styles.categoryBadgeText}>{event.category}</Text>
             </View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Favorito"
-              onPress={() => toggleFavorite(event.id)}
-              style={styles.heroFavBtn}
-            >
-              <Text style={styles.heroFavIcon}>{isFav ? '❤️' : '🤍'}</Text>
-            </Pressable>
           </View>
         </View>
 
@@ -127,8 +119,8 @@ export const EventDetailScreen = () => {
             </View>
             <View style={styles.orgRatingPill}>
               <Text style={styles.star}>★</Text>
-              <Text style={styles.ratingScore}>{event.organizerRating}</Text>
-              <Text style={styles.reviewsCount}>({event.organizerReviewsCount || 45})</Text>
+              <Text style={styles.ratingScore}>{event.organizerRating == null ? '—' : event.organizerRating.toFixed(1)}</Text>
+              <Text style={styles.reviewsCount}>({event.organizerReviewsCount || 0})</Text>
             </View>
           </View>
 
@@ -160,21 +152,23 @@ export const EventDetailScreen = () => {
 
           {/* Reseñas del organizador */}
           <View style={styles.sectionBlock}>
-            <Text style={styles.sectionHeading}>Reseñas del organizador</Text>
+            <Text style={styles.sectionHeading}>Opiniones de este evento</Text>
             <Text style={styles.sectionSubheading}>
               Experiencias de asistentes a eventos anteriores de {event.organizerName}
             </Text>
-            {reviews.length === 0 ? (
+            {reviewsLoading ? <ActivityIndicator accessibilityLabel="Cargando reseñas" color={colors.primary} /> : reviewsError ? (
+              <Text accessibilityRole="alert" style={styles.noReviewsText}>{reviewsError}</Text>
+            ) : reviews.length === 0 ? (
               <Text style={styles.noReviewsText}>Este organizador todavía no tiene reseñas.</Text>
             ) : (
-              reviews.map((rev) => (
-                <View key={rev.id} style={styles.reviewCard}>
+              reviews.map((rev, index) => (
+                <View key={rev.id || `${rev.usuarioId || 'asistente'}-${index}`} style={styles.reviewCard}>
                   <View style={styles.reviewHeaderRow}>
-                    <Image source={{ uri: rev.buyerAvatar }} style={styles.reviewAvatar} />
+                    {rev.buyerAvatar ? <Image source={{ uri: rev.buyerAvatar }} style={styles.reviewAvatar} /> : <View accessibilityElementsHidden style={styles.reviewAvatarFallback}><Text style={styles.reviewAvatarFallbackText}>★</Text></View>}
                     <View style={styles.reviewUserCol}>
-                      <Text style={styles.reviewUserName}>{rev.buyerName}</Text>
+                    <Text style={styles.reviewUserName}>{rev.buyerName || 'Comprador'}</Text>
                       <Text style={styles.reviewMeta} numberOfLines={1}>
-                        {rev.eventName} • {rev.date}
+                        {rev.eventName || event.name}{rev.date ? ` • ${rev.date}` : ''}
                       </Text>
                     </View>
                     <Text style={styles.reviewStars}>
@@ -197,7 +191,7 @@ export const EventDetailScreen = () => {
 
             <View style={styles.tiersList}>
               {event.tiers?.map((tier) => {
-                const remaining = tier.totalQuota - tier.soldCount;
+                const remaining = tier.availableQuota ?? (tier.totalQuota - tier.soldCount);
                 const isTierSoldOut = remaining <= 0;
                 const isSelected = selectedTierId === tier.id;
 
@@ -566,6 +560,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceContainerHighest,
     marginRight: spacing.sm,
   },
+  reviewAvatarFallback: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.surfaceContainerHighest, marginRight: spacing.sm, alignItems: 'center', justifyContent: 'center' },
+  reviewAvatarFallbackText: { color: colors.tertiary, fontSize: 16, fontWeight: '800' },
   reviewUserCol: {
     flex: 1,
     paddingRight: spacing.sm,

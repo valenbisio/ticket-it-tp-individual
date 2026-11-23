@@ -9,7 +9,7 @@ import { colors, spacing, borderRadius } from '../../data/theme.js';
 export const Header = ({ title, subtitle, showBack = false, onBack }) => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { currentRole, currentUser } = useApp();
+  const { currentRole, currentUser, cerrarSesion } = useApp();
 
   const handleBack = () => {
     if (onBack) {
@@ -44,9 +44,6 @@ export const Header = ({ title, subtitle, showBack = false, onBack }) => {
           <View style={styles.titleColumn}>
             <View style={styles.brandRow}>
               <Text style={styles.brandTitle}>AI Ticket It</Text>
-              <View style={styles.aiTag}>
-                <Text style={styles.aiTagText}>PRO</Text>
-              </View>
             </View>
             <Text style={styles.subtitleText}>
               {title || subtitle || (currentRole === 'buyer' ? 'Explorar' : 'Gestión')}
@@ -77,6 +74,15 @@ export const Header = ({ title, subtitle, showBack = false, onBack }) => {
               </Text>
             </View>
           )}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Cerrar sesión"
+            accessibilityHint="Cierra tu sesión y vuelve a la pantalla de acceso"
+            onPress={cerrarSesion}
+            style={({ pressed }) => [styles.logoutButton, pressed && styles.buttonPressed]}
+          >
+            <Text style={styles.logoutText}>Salir</Text>
+          </Pressable>
         </View>
       </View>
     </View>
@@ -202,5 +208,18 @@ const styles = StyleSheet.create({
     color: colors.onPrimaryContainer,
     fontWeight: 'bold',
     fontSize: 13,
+  },
+  logoutButton: {
+    minWidth: 48,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: spacing.xs,
+    paddingHorizontal: spacing.xs,
+  },
+  logoutText: {
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

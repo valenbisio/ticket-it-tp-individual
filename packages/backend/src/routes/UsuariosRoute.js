@@ -1,13 +1,13 @@
 import express from "express";
 import { CompraController } from "../controllers/CompraController.js";
-import { compraRepository } from "../data/seed.js";
+import { compraRepository, usuarioRepository } from "../data/seed.js";
 import { CompraService } from "../services/CompraService.js";
 import { validarSchema } from "../middlewares/validarSchema.js";
 import { enviarMensajeSchema } from "../schemas/mensajeSchema.js";
 import { crearReseniaSchema } from "../schemas/reseniaSchema.js";
 import { autenticar, requerirRol } from "./AuthRoute.js";
 
-const compraService = new CompraService({ compraRepository });
+const compraService = new CompraService({ compraRepository, usuarioRepository });
 const compraController = new CompraController({ compraService });
 
 const router = express.Router();
