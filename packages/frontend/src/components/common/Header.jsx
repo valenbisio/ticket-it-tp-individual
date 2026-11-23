@@ -10,7 +10,7 @@ import { colors, spacing, borderRadius } from '../../data/theme.js';
 export const Header = ({ title, subtitle, showBack = false, onBack }) => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { currentRole, currentUser, cerrarSesion } = useApp();
+  const { currentRole, currentUser } = useApp();
 
   const handleBack = () => {
     if (onBack) {
@@ -72,23 +72,20 @@ export const Header = ({ title, subtitle, showBack = false, onBack }) => {
             </Text>
           </View>
 
-          {currentUser?.avatar ? (
-            <Image source={{ uri: currentUser.avatar }} style={styles.avatar} />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarInitial}>
-                {currentUser?.name?.charAt(0) || 'U'}
-              </Text>
-            </View>
-          )}
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Cerrar sesión"
-            accessibilityHint="Cierra tu sesión y vuelve a la pantalla de acceso"
-            onPress={cerrarSesion}
-            style={({ pressed }) => [styles.logoutButton, pressed && styles.buttonPressed]}
+            accessibilityLabel="Abrir mi perfil"
+            accessibilityHint="Abre la pestaña para ver y editar tu perfil"
+            onPress={() => router.push('/profile')}
+            style={({ pressed }) => [styles.avatarButton, pressed && styles.buttonPressed]}
           >
-            <Text style={styles.logoutText}>Salir</Text>
+            {currentUser?.avatar ? (
+              <Image source={{ uri: currentUser.avatar }} style={styles.avatar} />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Text style={styles.avatarInitial}>{currentUser?.name?.charAt(0) || 'U'}</Text>
+              </View>
+            )}
           </Pressable>
         </View>
       </View>
@@ -199,14 +196,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   avatar: {
-    width: 34,
-    height: 34,
+    width: 40,
+    height: 40,
     borderRadius: borderRadius.full,
     backgroundColor: colors.surfaceContainerHigh,
   },
+  avatarButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   avatarPlaceholder: {
-    width: 34,
-    height: 34,
+    width: 40,
+    height: 40,
     borderRadius: borderRadius.full,
     backgroundColor: colors.primaryContainer,
     alignItems: 'center',

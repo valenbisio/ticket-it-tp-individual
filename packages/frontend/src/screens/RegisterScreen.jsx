@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { AccessibilityInfo, ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { AccessibilityInfo, ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Link } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { PasswordVisibilityIcon } from '../components/common/PasswordVisibilityIcon.jsx';
 import { useAuth } from '../contexts/auth-context.jsx';
 import { colors, spacing, borderRadius } from '../data/theme.js';
@@ -18,9 +20,31 @@ export default function RegisterScreen() {
   const [enviando, setEnviando] = useState(false);
   const [campoEnfocado, setCampoEnfocado] = useState(null);
   const [mostrarPassword, setMostrarPassword] = useState(false);
+  const [avatar, setAvatar] = useState(null);
+  const [errorAvatar, setErrorAvatar] = useState('');
   const update = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
     setErrors((prev) => ({ ...prev, [key]: '' }));
+  };
+  const elegirFoto = async () => {
+    setErrorAvatar('');
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setErrorAvatar('Necesitamos permiso para acceder a tus fotos.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.55, base64: true });
+    if (result.canceled) return;
+    const asset = result.assets[0];
+    if (!asset.base64) {
+      setErrorAvatar('No se pudo leer la imagen seleccionada. Probá con otra.');
+      return;
+    }
+    if (asset.base64.length > 4_500_000) {
+      setErrorAvatar('La imagen ocupa demasiado. Elegí una imagen más pequeña.');
+      return;
+    }
+    setAvatar(`data:image/jpeg;base64,${asset.base64}`);
   };
   const submit = async () => {
     const nextErrors = {};
@@ -36,7 +60,7 @@ export default function RegisterScreen() {
     setErrors({});
     setEnviando(true);
     try {
-      await registrar({ ...form, nombre: form.nombre.trim(), apellido: form.apellido.trim(), email: form.email.trim().toLowerCase() });
+      await registrar({ ...form, nombre: form.nombre.trim(), apellido: form.apellido.trim(), email: form.email.trim().toLowerCase(), ...(avatar ? { avatar } : {}) });
     } catch (error) {
       const message = error.message || 'No se pudo crear la cuenta.';
       const key = /email|cuenta/i.test(message) ? 'email' : /apellido/i.test(message) ? 'apellido' : /nombre/i.test(message) ? 'nombre' : 'password';
@@ -52,6 +76,14 @@ export default function RegisterScreen() {
       <View style={styles.card}>
         <Text accessibilityRole="header" style={styles.title}>Crear cuenta</Text>
         <Text style={styles.subtitle}>Elegí cómo querés usar AI Ticket It</Text>
+        <View style={styles.avatarSection}>
+          {avatar ? <Image accessibilityLabel="Vista previa de la foto de perfil" source={{ uri: avatar }} style={styles.avatar} /> : <View style={styles.avatarPlaceholder}><Ionicons name="person" size={32} color={colors.onPrimaryContainer} /></View>}
+          <Pressable accessibilityRole="button" accessibilityLabel={avatar ? 'Cambiar foto de perfil' : 'Agregar foto de perfil opcional'} accessibilityHint="Podés crear la cuenta sin subir una foto" onPress={elegirFoto} style={styles.photoButton}>
+            <Ionicons name="camera-outline" size={18} color={colors.onPrimary} />
+            <Text style={styles.photoButtonText}>{avatar ? 'Cambiar foto' : 'Agregar foto (opcional)'}</Text>
+          </Pressable>
+          {!!errorAvatar && <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.error}>{errorAvatar}</Text>}
+        </View>
         {[
           ['nombre', 'Nombre', 'givenName'],
           ['apellido', 'Apellido', 'familyName'],
@@ -115,6 +147,7 @@ const styles = StyleSheet.create({
   container: { flexGrow: 1, backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center', padding: spacing.md },
   card: { width: '100%', maxWidth: 420, backgroundColor: colors.surfaceContainerLow, borderRadius: borderRadius.xl, padding: spacing.lg, borderWidth: 1, borderColor: colors.surfaceContainerHigh },
   title: { color: colors.onSurface, fontWeight: '800', fontSize: 27, textAlign: 'center' }, subtitle: { color: colors.onSurfaceVariant, textAlign: 'center', marginVertical: spacing.sm },
+  avatarSection: { alignItems: 'center', marginVertical: spacing.md, gap: spacing.sm }, avatar: { width: 96, height: 96, borderRadius: borderRadius.full, backgroundColor: colors.surfaceContainerHigh }, avatarPlaceholder: { width: 96, height: 96, borderRadius: borderRadius.full, backgroundColor: colors.primaryContainer, alignItems: 'center', justifyContent: 'center' }, photoButton: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, backgroundColor: colors.primary, borderRadius: borderRadius.md, paddingHorizontal: spacing.md }, photoButtonText: { color: colors.onPrimary, fontWeight: '700' },
   field: { marginBottom: spacing.xs }, label: { color: colors.onSurface, fontWeight: '700', marginBottom: spacing.xs, fontSize: 15 },
   input: { flex: 1, color: colors.onSurface, backgroundColor: colors.surfaceContainer, borderRadius: borderRadius.md, borderWidth: 1, borderColor: colors.outlineVariant, paddingHorizontal: spacing.md, minHeight: 52, fontSize: 16, marginBottom: spacing.sm }, inputFocused: { borderColor: colors.focus, borderWidth: 2 }, inputError: { borderColor: colors.error, borderWidth: 2 },
   error: { color: colors.error, marginTop: -spacing.xs, marginBottom: spacing.sm, fontSize: 14 },

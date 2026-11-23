@@ -1,6 +1,7 @@
 import { request, setToken, getCurrentUserId } from './apiClient.js';
 
 export const authApi = {
+ 
   async login(email, password) {
     const session = await request('/auth/login', { method: 'POST', body: { email, password } });
     setToken(session.token, session.usuario.id);

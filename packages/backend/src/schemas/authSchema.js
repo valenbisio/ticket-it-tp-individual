@@ -14,6 +14,7 @@ export const registroSchema = z.object({
   nombre: nombrePersona("El nombre"),
   apellido: nombrePersona("El apellido"),
   rol: z.enum(["comprador", "organizador"]),
+  avatar: z.string().regex(/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/).max(6_000_000).optional(),
 });
 
 export const loginSchema = z.object(credenciales);
@@ -22,4 +23,5 @@ export const actualizarPerfilSchema = z.object({
   email: credenciales.email,
   nombre: nombrePersona("El nombre"),
   apellido: nombrePersona("El apellido"),
+  avatar: z.string().regex(/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/).max(6_000_000).nullable().optional(),
 });

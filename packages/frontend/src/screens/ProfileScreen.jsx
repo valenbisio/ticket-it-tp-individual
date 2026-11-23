@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { AccessibilityInfo, ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { AccessibilityInfo, ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useApp } from '../contexts/AppContext.jsx';
 import { useAuth } from '../contexts/auth-context.jsx';
 import { BottomTabBar } from '../components/common/BottomTabBar.jsx';
@@ -15,9 +17,14 @@ export default function ProfileScreen() {
   const [errores, setErrores] = useState({});
   const [guardando, setGuardando] = useState(false);
   const [mensaje, setMensaje] = useState('');
+  const [avatar, setAvatar] = useState(null);
+  const [errorAvatar, setErrorAvatar] = useState('');
 
   useEffect(() => {
-    if (estado?.usuario) setForm({ nombre: estado.usuario.nombre, apellido: estado.usuario.apellido, email: estado.usuario.email });
+    if (estado?.usuario) {
+      setForm({ nombre: estado.usuario.nombre, apellido: estado.usuario.apellido, email: estado.usuario.email });
+      setAvatar(estado.usuario.avatar || null);
+    }
   }, [estado?.usuario]);
 
   const update = (campo, valor) => {
@@ -38,7 +45,7 @@ export default function ProfileScreen() {
     }
     setGuardando(true);
     try {
-      await actualizarPerfil({ ...form, nombre: form.nombre.trim(), apellido: form.apellido.trim(), email: form.email.trim().toLowerCase() });
+      await actualizarPerfil({ ...form, nombre: form.nombre.trim(), apellido: form.apellido.trim(), email: form.email.trim().toLowerCase(), avatar });
       setMensaje('Perfil actualizado correctamente.');
       AccessibilityInfo.announceForAccessibility('Perfil actualizado correctamente.');
     } catch (error) {
@@ -48,6 +55,28 @@ export default function ProfileScreen() {
     } finally {
       setGuardando(false);
     }
+  };
+
+  const elegirFoto = async () => {
+    setErrorAvatar('');
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setErrorAvatar('Necesitamos permiso para acceder a tus fotos.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.55, base64: true });
+    if (result.canceled) return;
+    const asset = result.assets[0];
+    if (!asset.base64) {
+      setErrorAvatar('No se pudo leer la imagen seleccionada. Probá con otra.');
+      return;
+    }
+    if (asset.base64.length > 4_500_000) {
+      setErrorAvatar('La imagen ocupa demasiado. Elegí una imagen más pequeña.');
+      return;
+    }
+    setAvatar(`data:image/jpeg;base64,${asset.base64}`);
+    setMensaje('');
   };
 
   const salir = async () => {
@@ -62,6 +91,14 @@ export default function ProfileScreen() {
         <View style={styles.card}>
           <Text accessibilityRole="header" style={styles.title}>Tus datos</Text>
           <Text style={styles.subtitle}>Podés actualizar tus datos personales. El rol queda asociado a tu cuenta.</Text>
+          <View style={styles.avatarSection}>
+            {avatar ? <Image accessibilityLabel="Foto de perfil actual" source={{ uri: avatar }} style={styles.avatar} /> : <View style={styles.avatarPlaceholder}><Ionicons name="person" size={36} color={colors.onPrimaryContainer} /></View>}
+            <Pressable accessibilityRole="button" accessibilityLabel={avatar ? 'Cambiar foto de perfil' : 'Subir foto de perfil'} onPress={elegirFoto} style={styles.photoButton}>
+              <Ionicons name="camera-outline" size={18} color={colors.onPrimary} />
+              <Text style={styles.photoButtonText}>{avatar ? 'Cambiar foto' : 'Subir foto'}</Text>
+            </Pressable>
+            {!!errorAvatar && <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.error}>{errorAvatar}</Text>}
+          </View>
           {[
             ['nombre', 'Nombre', 'givenName'],
             ['apellido', 'Apellido', 'familyName'],
@@ -93,6 +130,11 @@ const styles = StyleSheet.create({
   card: { width: '100%', maxWidth: 520, alignSelf: 'center', backgroundColor: colors.surfaceContainerLow, borderRadius: borderRadius.lg, borderWidth: 1, borderColor: colors.surfaceContainerHigh, padding: spacing.lg },
   title: { color: colors.onSurface, fontWeight: '800', fontSize: 24 },
   subtitle: { color: colors.onSurfaceVariant, lineHeight: 20, marginTop: spacing.xs, marginBottom: spacing.md },
+  avatarSection: { alignItems: 'center', marginBottom: spacing.lg, gap: spacing.sm },
+  avatar: { width: 104, height: 104, borderRadius: borderRadius.full, backgroundColor: colors.surfaceContainerHigh },
+  avatarPlaceholder: { width: 104, height: 104, borderRadius: borderRadius.full, backgroundColor: colors.primaryContainer, alignItems: 'center', justifyContent: 'center' },
+  photoButton: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, backgroundColor: colors.primary, borderRadius: borderRadius.md, paddingHorizontal: spacing.md },
+  photoButtonText: { color: colors.onPrimary, fontWeight: '700' },
   field: { marginBottom: spacing.sm },
   label: { color: colors.onSurface, fontWeight: '700', marginBottom: spacing.xs },
   input: { minHeight: 52, paddingHorizontal: spacing.md, borderRadius: borderRadius.md, borderWidth: 1, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainer, color: colors.onSurface, fontSize: 16 },

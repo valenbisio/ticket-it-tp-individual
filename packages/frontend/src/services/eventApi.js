@@ -19,8 +19,11 @@ export const eventApi = {
     const result = await request(`/api/eventos${queryString ? `?${queryString}` : ''}`);
     return result.eventos.map(eventoUI);
   },
+
   async getCategories() { return (await request('/api/eventos/categorias')).categorias; },
+
   async getEventById(id) { return eventoUI((await this.getEvents()).find((event) => event.id === id) || {}); },
+  
   async createEvent(event) {
     const categories = await this.getCategories();
     const normalizedCategory = event.category.toLowerCase();

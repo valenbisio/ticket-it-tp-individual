@@ -60,15 +60,18 @@ export class CompraService {
   async realizarCompra(eventoId, comprador, tipoEntradaNombre, cantidad) {
     const evento = this.eventoRepository.obtenerPorId(eventoId);
     if (!evento) throw new NotFoundError(`Evento no encontrado: ${eventoId}`);
+
     const tipoEntrada = evento.tiposEntrada.find(
       (tipo) => tipo.nombre.toLowerCase() === tipoEntradaNombre.toLowerCase(),
     );
     if (!tipoEntrada) throw new NotFoundError(`Tipo de entrada no encontrado: ${tipoEntradaNombre}`);
+    
     const comprasEvento = this.compraRepository.obtenerPorEvento(eventoId);
     tipoEntrada.reservar(cantidad, comprasEvento);
     const compradorDatos = typeof comprador === "string"
       ? (this.usuarioRepository?.obtenerPorId(comprador) ?? { id: comprador })
       : comprador;
+
     const compra = new Compra({
       comprador: compradorDatos,
       evento,

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AccessibilityInfo, ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Link } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { PasswordVisibilityIcon } from '../components/common/PasswordVisibilityIcon.jsx';
 import { useAuth } from '../contexts/auth-context.jsx';
@@ -8,6 +9,7 @@ import { colors, spacing, borderRadius } from '../data/theme.js';
 
 export const RoleSelectScreen = () => {
   const { iniciarSesion, estado } = useAuth();
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({});
@@ -22,16 +24,20 @@ export const RoleSelectScreen = () => {
     if (Object.keys(nextErrors).length) { setErrors(nextErrors); AccessibilityInfo.announceForAccessibility('Revisá los campos marcados.'); return; }
     setErrors({});
     setEnviando(true);
+    const inicioEspera = Date.now();
     try {
       await iniciarSesion(email.trim(), password);
-      // AppContext carga la sesión y redirige según el rol.
+      const tiempoRestante = 900 - (Date.now() - inicioEspera);
+      if (tiempoRestante > 0) await new Promise((resolve) => setTimeout(resolve, tiempoRestante));
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      router.replace('/(buyer)/explore');
     } catch (e) {
+      const tiempoRestante = 900 - (Date.now() - inicioEspera);
+      if (tiempoRestante > 0) await new Promise((resolve) => setTimeout(resolve, tiempoRestante));
       const message = e.message || 'No se pudo iniciar sesión';
       setErrors({ password: message });
       AccessibilityInfo.announceForAccessibility(`Error al iniciar sesión. ${message}`);
-    } finally {
-      setEnviando(false);
-    }
+    } finally { setEnviando(false); }
   };
 
   if (estado === 'cargando') return <View style={styles.container} accessibilityRole="progressbar" accessibilityLabel="Verificando sesión"><ActivityIndicator color={colors.primary} /></View>;
@@ -81,9 +87,12 @@ export const RoleSelectScreen = () => {
           </Pressable>
         </View>
         {!!errors.password && <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.error}>{errors.password}</Text>}
-        <Pressable accessibilityRole="button" accessibilityState={{ disabled: enviando }} accessibilityLiveRegion="polite" onPress={login} disabled={enviando} style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
-          {enviando ? <ActivityIndicator color={colors.onPrimary} accessibilityLabel="Iniciando sesión" /> : <Text style={styles.buttonText}>Iniciar sesión</Text>}
-        </Pressable>
+        {enviando ? (
+          <View accessibilityRole="progressbar" accessibilityLabel="Iniciando sesión y cargando eventos" accessibilityLiveRegion="polite" style={styles.loading}>
+            <ActivityIndicator color={colors.primary} size="large" />
+            <Text style={styles.loadingText}>Iniciando sesión y cargando eventos…</Text>
+          </View>
+        ) : <Pressable accessibilityRole="button" onPress={login} style={({ pressed }) => [styles.button, pressed && styles.pressed]}><Text style={styles.buttonText}>Iniciar sesión</Text></Pressable>}
         <View style={styles.linkRow}>
           <Text style={styles.muted}>¿No tenés cuenta?</Text>
           <Link accessibilityRole="link" href="/register" style={styles.link}>Crear una cuenta</Link>
@@ -102,6 +111,7 @@ const styles = StyleSheet.create({
   label: { color: colors.onSurface, fontWeight: '700', marginBottom: spacing.xs },
   input: { color: colors.onSurface, backgroundColor: colors.surfaceContainer, borderRadius: borderRadius.md, borderWidth: 1, borderColor: colors.outlineVariant, paddingHorizontal: spacing.md, paddingVertical: 14, minHeight: 52, marginBottom: spacing.md, fontSize: 16 }, inputFocused: { borderColor: colors.focus, borderWidth: 2 },
   button: { backgroundColor: colors.primary, borderRadius: borderRadius.md, padding: spacing.md, alignItems: 'center', justifyContent: 'center', minHeight: 52, marginTop: spacing.xs }, pressed: { opacity: 0.8 }, buttonText: { color: colors.onPrimary, fontWeight: '800' },
+  loading: { minHeight: 76, marginTop: spacing.xs, alignItems: 'center', justifyContent: 'center', gap: spacing.xs }, loadingText: { color: colors.onSurfaceVariant, textAlign: 'center' },
   error: { color: colors.error, marginBottom: spacing.sm, fontSize: 14 }, linkRow: { flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: spacing.xs, marginTop: spacing.lg, minHeight: 72, paddingBottom: spacing.xs }, muted: { color: colors.onSurfaceVariant, textAlign: 'center' }, link: { color: colors.primary, fontWeight: '700', minHeight: 44, paddingHorizontal: spacing.md, textAlign: 'center', textAlignVertical: 'center' },
   passwordRow: { position: 'relative', width: '100%', justifyContent: 'center' },
   passwordInput: { width: '100%', paddingRight: 48 },

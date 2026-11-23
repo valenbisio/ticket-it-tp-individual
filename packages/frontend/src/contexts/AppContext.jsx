@@ -20,7 +20,7 @@ const nombreCompleto = (nombre = '', apellido = '') => {
   }
   return [...partesNombre, ...partesApellido.slice(coincidencias)].join(' ');
 };
-const usuarioUI = (usuario, demo) => ({ ...demo, id: usuario.id, name: nombreCompleto(usuario.nombre, usuario.apellido), role: usuario.rol === 'organizador' ? 'organizer' : 'buyer' });
+const usuarioUI = (usuario, demo) => ({ ...demo, id: usuario.id, name: nombreCompleto(usuario.nombre, usuario.apellido), role: usuario.rol === 'organizador' ? 'organizer' : 'buyer', avatar: usuario.avatar || null });
 
 export const AppProvider = ({ children }) => {
   const router = useRouter();
@@ -88,6 +88,13 @@ export const AppProvider = ({ children }) => {
       }
     })();
   }, [auth.estado, loadEvents, router, showToast]);
+
+  useEffect(() => {
+    if (auth.estado?.usuario) {
+      const demo = INITIAL_USERS.find((user) => user.role === (auth.estado.usuario.rol === 'organizador' ? 'organizer' : 'buyer')) || INITIAL_USERS[0];
+      setCurrentUser(usuarioUI(auth.estado.usuario, demo));
+    }
+  }, [auth.estado?.usuario]);
 
   const loadPurchases = useCallback(async () => {
     if (currentRole !== 'buyer') return [];

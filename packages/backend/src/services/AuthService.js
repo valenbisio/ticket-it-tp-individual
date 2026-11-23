@@ -23,6 +23,7 @@ export class AuthService {
       nombre: datos.nombre,
       apellido: datos.apellido,
       rol: datos.rol,
+      avatar: datos.avatar,
       passwordHash: hashPassword(datos.password),
     };
     this.usuarioRepository.agregar(usuario);
@@ -53,6 +54,7 @@ export class AuthService {
     usuario.email = datos.email;
     usuario.nombre = datos.nombre;
     usuario.apellido = datos.apellido;
+    if (datos.avatar !== undefined) usuario.avatar = datos.avatar;
     return { usuario: usuarioPublico(usuario) };
   }
 
@@ -110,6 +112,6 @@ function verificarPassword(password, passwordHash) {
   return esperado.length === obtenido.length && timingSafeEqual(esperado, obtenido);
 }
 
-function usuarioPublico({ id, email, nombre, apellido, rol }) {
-  return { id, email, nombre, apellido, rol };
+function usuarioPublico({ id, email, nombre, apellido, rol, avatar }) {
+  return { id, email, nombre, apellido, rol, avatar: avatar ?? null };
 }
