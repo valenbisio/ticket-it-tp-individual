@@ -14,11 +14,12 @@ import { ForbiddenError } from "../errors/ForbiddenError.js";
  * El controller delega en este service todo lo que no sea HTTP.
  */
 export class CompraService {
-  constructor({ compraRepository, eventoRepository, usuarioRepository, hoy } = {}) {
+  constructor({ compraRepository, eventoRepository, usuarioRepository, hoy, publicarMensaje = () => {} } = {}) {
     this.compraRepository = compraRepository;
     this.eventoRepository = eventoRepository;
     this.usuarioRepository = usuarioRepository;
     this.hoy = hoy;
+    this.publicarMensaje = publicarMensaje;
   }
 
   async obtenerComprasDeUsuario(usuarioId) {
@@ -106,6 +107,7 @@ export class CompraService {
       mensaje: texto,
     });
     compra.agregarMensaje(mensaje);
+    this.publicarMensaje({ compra, mensaje, rol: esOrganizador ? "organizador" : "comprador" });
     return { mensaje, rol: esOrganizador ? "organizador" : "comprador" };
   }
 
@@ -117,7 +119,9 @@ export class CompraService {
     if (!esParticipante) {
       throw new ForbiddenError("El usuario no puede consultar mensajes de esta compra");
     }
+    compra.mensajesLeidosPor[usuarioId] = compra.mensajes.length;
     return compra.mensajes.map((mensaje) => ({
+      id: mensaje.id,
       usuario: {
         id: mensaje.usuario?.id ?? null,
         nombre: mensaje.usuario?.nombre ?? null,
@@ -127,6 +131,36 @@ export class CompraService {
       mensaje: mensaje.mensaje,
       enviado: mensaje.enviado,
     }));
+  }
+
+  async obtenerConversaciones(usuarioId) {
+    return this.compraRepository.obtenerTodas()
+      .filter((compra) => compra.mensajes.length > 0
+        && (compra.comprador?.id === usuarioId || compra.evento?.organizador?.id === usuarioId))
+      .map((compra) => {
+        const esComprador = compra.comprador?.id === usuarioId;
+        const ultimoMensaje = compra.mensajes.at(-1);
+        const leidos = compra.mensajesLeidosPor[usuarioId] ?? 0;
+        const mensajesNoLeidos = compra.mensajes
+          .slice(leidos)
+          .filter((mensaje) => mensaje.usuario?.id !== usuarioId).length;
+        const participante = esComprador ? compra.evento?.organizador : compra.comprador;
+        return {
+          compraId: compra.id,
+          eventoId: compra.evento?.id ?? null,
+          eventoNombre: compra.evento?.nombre ?? "Evento",
+          eventoFecha: compra.evento?.fecha ?? null,
+          participante: {
+            id: participante?.id ?? null,
+            nombre: [participante?.nombre, participante?.apellido].filter(Boolean).join(" "),
+            rol: esComprador ? "organizador" : "comprador",
+          },
+          ultimoMensaje: ultimoMensaje.mensaje,
+          ultimoMensajeEnviado: ultimoMensaje.enviado,
+          mensajesNoLeidos,
+        };
+      })
+      .sort((a, b) => new Date(b.ultimoMensajeEnviado) - new Date(a.ultimoMensajeEnviado));
   }
 
   async cancelarCompra(compraId, usuarioId) {

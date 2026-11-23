@@ -15,6 +15,7 @@ import { Header } from '../components/common/Header.jsx';
 import { BottomTabBar } from '../components/common/BottomTabBar.jsx';
 import { colors, spacing, borderRadius } from '../data/theme.js';
 import { EventListSkeleton } from '../components/common/LoadingSkeleton.jsx';
+import { WelcomeGreeting } from '../components/common/WelcomeGreeting.jsx';
 import { api } from '../services/api.js';
 
 export const ExploreEventsScreen = () => {
@@ -136,10 +137,7 @@ export const ExploreEventsScreen = () => {
           <View style={styles.headerBlock}>
             {/* User greeting */}
             <View style={styles.greetingRow}>
-              <View>
-                <Text style={styles.greetingSmall}>Bienvenido de vuelta</Text>
-                <Text style={styles.greetingTitle}>¡Hola {currentUser.name}! 👋</Text>
-              </View>
+              <WelcomeGreeting name={currentUser.name} />
             </View>
 
             {/* Search Input */}
@@ -261,16 +259,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: spacing.md,
-  },
-  greetingSmall: {
-    color: colors.onSurfaceVariant,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  greetingTitle: {
-    color: colors.onSurface,
-    fontSize: 26,
-    fontWeight: '800',
   },
   cityPill: {
     backgroundColor: colors.surfaceContainerHigh,

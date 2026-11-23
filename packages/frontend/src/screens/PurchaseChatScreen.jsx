@@ -20,11 +20,12 @@ import { colors, spacing, borderRadius } from '../data/theme.js';
 export const PurchaseChatScreen = () => {
   const { id } = useLocalSearchParams(); // purchaseId
   const router = useRouter();
-  const { purchases, currentUser, showToast } = useApp();
+  const { purchases, conversations, currentUser, showToast, loadConversations, lastChatMessage } = useApp();
 
   const purchase = useMemo(() => {
     return purchases.find((p) => p.id === id) || null;
   }, [purchases, id]);
+  const conversation = useMemo(() => conversations.find((item) => item.id === id) || null, [conversations, id]);
 
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
@@ -39,7 +40,12 @@ export const PurchaseChatScreen = () => {
       setLoadError('');
       try {
         const msgs = await api.getChatMessages(id, currentUser.id);
-        setMessages(msgs);
+        setMessages((previous) => {
+          const merged = new Map(previous.map((message) => [message.id, message]));
+          msgs.forEach((message) => merged.set(message.id, message));
+          return Array.from(merged.values()).sort((a, b) => Date.parse(a.sentAt || 0) - Date.parse(b.sentAt || 0));
+        });
+        await loadConversations();
       } catch (error) {
         const message = error.message || 'No se pudo cargar la conversación';
         setLoadError(message);
@@ -49,7 +55,24 @@ export const PurchaseChatScreen = () => {
       }
     };
     if (id) void loadChat();
-  }, [id, currentUser.id, showToast]);
+  }, [id, currentUser.id, showToast, loadConversations]);
+
+  useEffect(() => {
+    if (!id || lastChatMessage?.compraId !== id) return undefined;
+    let active = true;
+    void api.getChatMessages(id, currentUser.id)
+      .then((latestMessages) => {
+        if (!active) return;
+        setMessages((previous) => {
+          const merged = new Map(previous.map((message) => [message.id, message]));
+          latestMessages.forEach((message) => merged.set(message.id, message));
+          return Array.from(merged.values()).sort((a, b) => Date.parse(a.sentAt || 0) - Date.parse(b.sentAt || 0));
+        });
+        return loadConversations();
+      })
+      .catch((error) => showToast(error.message || 'No se pudo actualizar el chat', 'error'));
+    return () => { active = false; };
+  }, [id, lastChatMessage, currentUser.id, loadConversations, showToast]);
 
   const handleSend = async () => {
     if (!inputText.trim()) return;
@@ -64,6 +87,7 @@ export const PurchaseChatScreen = () => {
       });
       setMessages((prev) => [...prev, newMsg]);
       setInputText('');
+      await loadConversations();
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
       }, 100);
@@ -103,17 +127,17 @@ export const PurchaseChatScreen = () => {
       <Header title="Chat de la Compra" showBack onBack={() => router.back()} />
 
       {/* Purchase Context Banner */}
-      {purchase && (
+      {(purchase || conversation) && (
         <View style={styles.contextBanner}>
           <View style={styles.contextIconBox}>
             <Text style={styles.contextIcon}>🎟️</Text>
           </View>
           <View style={styles.contextCol}>
             <Text style={styles.contextEventName} numberOfLines={1}>
-              {purchase.eventName}
+              {purchase?.eventName || conversation?.eventName}
             </Text>
             <Text style={styles.contextSub}>
-              Compra #{purchase.id} • {purchase.tierName} (×{purchase.quantity})
+              {purchase ? `Compra #${purchase.id} • ${purchase.tierName} (×${purchase.quantity})` : `Conversación de compra #${conversation.id}`}
             </Text>
           </View>
           <View style={styles.verifiedTag}>

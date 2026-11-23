@@ -11,6 +11,28 @@ const AuthContext = createContext(null);
 let limpiarSesionActiva = null;
 let tokenEnMemoria = null;
 
+async function leerTokenGuardado() {
+  return Platform.OS === 'web'
+    ? globalThis.localStorage?.getItem(TOKEN_KEY) ?? null
+    : SecureStore.getItemAsync(TOKEN_KEY);
+}
+
+async function guardarToken(token) {
+  if (Platform.OS === 'web') {
+    globalThis.localStorage?.setItem(TOKEN_KEY, token);
+    return;
+  }
+  await SecureStore.setItemAsync(TOKEN_KEY, token);
+}
+
+async function borrarTokenGuardado() {
+  if (Platform.OS === 'web') {
+    globalThis.localStorage?.removeItem(TOKEN_KEY);
+    return;
+  }
+  await SecureStore.deleteItemAsync(TOKEN_KEY);
+}
+
 export function AuthProvider({ children }) {
   const [estado, setEstado] = useState('cargando');
 
@@ -19,7 +41,7 @@ export function AuthProvider({ children }) {
 
     void (async () => {
       try {
-        const token = Platform.OS === 'web' ? null : await SecureStore.getItemAsync(TOKEN_KEY);
+        const token = await leerTokenGuardado();
         tokenEnMemoria = token;
         if (!token) {
           if (activo) setEstado(null);
@@ -32,7 +54,7 @@ export function AuthProvider({ children }) {
         } catch {
           tokenEnMemoria = null;
           api.setToken(null);
-          await SecureStore.deleteItemAsync(TOKEN_KEY);
+          await borrarTokenGuardado();
           if (activo) setEstado(null);
           return;
         }
@@ -52,7 +74,7 @@ export function AuthProvider({ children }) {
   const iniciarSesion = useCallback(async (email, password) => {
     const data = await api.login(email, password);
     try {
-      if (Platform.OS !== 'web') await SecureStore.setItemAsync(TOKEN_KEY, data.token);
+      await guardarToken(data.token);
     } catch {
       api.setToken(null);
       throw new Error('No se pudo guardar la sesión de forma segura en este dispositivo.');
@@ -64,7 +86,7 @@ export function AuthProvider({ children }) {
   const registrar = useCallback(async (datos) => {
     const data = await api.register(datos);
     try {
-      if (Platform.OS !== 'web') await SecureStore.setItemAsync(TOKEN_KEY, data.token);
+      await guardarToken(data.token);
     } catch {
       api.setToken(null);
       throw new Error('No se pudo guardar la sesión de forma segura en este dispositivo.');
@@ -83,7 +105,7 @@ export function AuthProvider({ children }) {
     tokenEnMemoria = null;
     api.setToken(null);
     try {
-      if (Platform.OS !== 'web') await SecureStore.deleteItemAsync(TOKEN_KEY);
+      await borrarTokenGuardado();
     } finally {
       setEstado(null);
     }

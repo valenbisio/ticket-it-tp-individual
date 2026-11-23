@@ -1,29 +1,50 @@
 import { useState, useEffect } from 'react';
 import { api } from '../services/api.js';
 
-export const useChat = (purchaseId) => {
+export const useChat = (purchaseId, userId) => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!purchaseId) return;
     let isMounted = true;
-    api.getChatMessages(purchaseId).then((data) => {
-      if (isMounted) {
-        setMessages(data);
-        setLoading(false);
-      }
-    });
+    if (!purchaseId || !userId) {
+      setMessages([]);
+      setLoading(false);
+      setError('');
+      return () => { isMounted = false; };
+    }
+
+    setLoading(true);
+    setError('');
+    api.getChatMessages(purchaseId, userId)
+      .then((data) => {
+        if (isMounted) setMessages(data);
+      })
+      .catch((requestError) => {
+        if (isMounted) setError(requestError.message || 'No se pudo cargar la conversación.');
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
     return () => {
       isMounted = false;
     };
-  }, [purchaseId]);
+  }, [purchaseId, userId]);
 
   const sendMessage = async (messageData) => {
-    const sent = await api.sendChatMessage(purchaseId, messageData);
-    setMessages((prev) => [...prev, sent]);
-    return sent;
+    if (!purchaseId || !userId) throw new Error('Falta identificar la compra o el usuario.');
+    try {
+      const sent = await api.sendChatMessage(purchaseId, userId, messageData);
+      setMessages((prev) => [...prev, sent]);
+      setError('');
+      return sent;
+    } catch (requestError) {
+      setError(requestError.message || 'No se pudo enviar el mensaje.');
+      throw requestError;
+    }
   };
 
-  return { messages, loading, sendMessage };
+  return { messages, loading, error, sendMessage };
 };

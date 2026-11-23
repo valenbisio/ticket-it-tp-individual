@@ -41,14 +41,20 @@ export const Header = ({ title, subtitle, showBack = false, onBack }) => {
             </View>
           )}
 
-          <View style={styles.titleColumn}>
+          <Pressable
+            accessibilityRole="link"
+            accessibilityLabel={currentRole === 'buyer' ? 'AI Ticket It, ir a Explorar eventos' : 'AI Ticket It, ir a Mis eventos'}
+            accessibilityHint="Abre la pantalla principal de tu perfil"
+            onPress={() => router.replace(currentRole === 'buyer' ? '/(buyer)/explore' : '/(organizer)/events')}
+            style={styles.titleColumn}
+          >
             <View style={styles.brandRow}>
               <Text style={styles.brandTitle}>AI Ticket It</Text>
             </View>
             <Text style={styles.subtitleText}>
               {title || subtitle || (currentRole === 'buyer' ? 'Explorar' : 'Gestión')}
             </Text>
-          </View>
+          </Pressable>
         </View>
 
         {/* Right: Active Role badge & User Avatar */}
@@ -138,6 +144,7 @@ const styles = StyleSheet.create({
   },
   titleColumn: {
     justifyContent: 'center',
+    minHeight: 44,
   },
   brandRow: {
     flexDirection: 'row',

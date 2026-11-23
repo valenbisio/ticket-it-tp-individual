@@ -7,7 +7,20 @@ import { INITIAL_USERS } from '../data/initialData.js';
 import { canCancelPurchase } from '../utils/purchases.js';
 
 const AppContext = createContext(null);
-const usuarioUI = (usuario, demo) => ({ ...demo, id: usuario.id, name: `${usuario.nombre} ${usuario.apellido}`.trim(), role: usuario.rol === 'organizador' ? 'organizer' : 'buyer' });
+const nombreCompleto = (nombre = '', apellido = '') => {
+  const partesNombre = String(nombre).trim().split(/\s+/).filter(Boolean);
+  const partesApellido = String(apellido).trim().split(/\s+/).filter(Boolean);
+  const normalizar = (parte) => parte.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  let coincidencias = Math.min(partesNombre.length, partesApellido.length);
+  while (coincidencias > 0) {
+    const sufijoNombre = partesNombre.slice(-coincidencias).map(normalizar);
+    const prefijoApellido = partesApellido.slice(0, coincidencias).map(normalizar);
+    if (sufijoNombre.every((parte, indice) => parte === prefijoApellido[indice])) break;
+    coincidencias -= 1;
+  }
+  return [...partesNombre, ...partesApellido.slice(coincidencias)].join(' ');
+};
+const usuarioUI = (usuario, demo) => ({ ...demo, id: usuario.id, name: nombreCompleto(usuario.nombre, usuario.apellido), role: usuario.rol === 'organizador' ? 'organizer' : 'buyer' });
 
 export const AppProvider = ({ children }) => {
   const router = useRouter();
@@ -17,6 +30,8 @@ export const AppProvider = ({ children }) => {
   const [events, setEvents] = useState([]);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [purchases, setPurchases] = useState([]);
+  const [conversations, setConversations] = useState([]);
+  const [lastChatMessage, setLastChatMessage] = useState(null);
   const [purchasesLoading, setPurchasesLoading] = useState(false);
   const [activeQR, setActiveQR] = useState(null);
   const [toast, setToast] = useState(null);
@@ -24,6 +39,7 @@ export const AppProvider = ({ children }) => {
   const [ready, setReady] = useState(false);
   const routedUserId = useRef(null);
   const eventsRequestId = useRef(0);
+  const conversationsRequestId = useRef(0);
 
   const showToast = useCallback((message, type = 'info') => {
     setToast({ message, type });
@@ -85,6 +101,51 @@ export const AppProvider = ({ children }) => {
     }
   }, [currentRole]);
 
+  const loadConversations = useCallback(async () => {
+    if (!currentUser?.id) return [];
+    const requestId = ++conversationsRequestId.current;
+    const list = await api.getConversations(currentUser.id);
+    if (requestId === conversationsRequestId.current) setConversations(list);
+    return list;
+  }, [currentUser?.id]);
+
+  useEffect(() => {
+    const token = auth.estado?.token;
+    if (!ready || !currentUser?.id || !token) return undefined;
+    let active = true;
+    let socket;
+    let retryTimer;
+    let retryCount = 0;
+    const connect = () => {
+      if (!active) return;
+      socket = api.connectChat(token, {
+        onOpen: () => {
+          retryCount = 0;
+          void loadConversations().catch(() => {});
+        },
+        onMessage: (message) => {
+          if (message.type !== 'new_message') return;
+          setLastChatMessage(message);
+          void loadConversations().catch(() => {});
+        },
+        onClose: (event) => {
+          if (!active || event.code === 1000 || event.code === 1008) return;
+          const delay = Math.min(1000 * (2 ** retryCount), 30000);
+          retryCount += 1;
+          retryTimer = setTimeout(connect, delay);
+        },
+      });
+    };
+    connect();
+    return () => {
+      active = false;
+      clearTimeout(retryTimer);
+      socket?.close(1000, 'Sesión cerrada');
+    };
+  }, [ready, currentUser?.id, auth.estado?.token, loadConversations]);
+
+  const unreadMessagesCount = conversations.reduce((total, conversation) => total + conversation.unreadCount, 0);
+
   const markPurchaseRated = useCallback((purchaseId) => {
     setPurchases((actuales) => actuales.map((purchase) => (
       purchase.id === purchaseId ? { ...purchase, hasRated: true } : purchase
@@ -111,6 +172,8 @@ export const AppProvider = ({ children }) => {
     routedUserId.current = null;
     setReady(false);
     setPurchases([]);
+    setConversations([]);
+    conversationsRequestId.current += 1;
     router.replace('/');
   }, [auth, router]);
 
@@ -152,7 +215,8 @@ export const AppProvider = ({ children }) => {
   return (
     <AppContext.Provider value={{
       currentRole, setRole, currentUser, setUser, cerrarSesion, users: INITIAL_USERS,
-      events, eventsLoading, loadEvents, purchases, loadPurchases, purchasesLoading, buyTicket, markPurchaseUsed,
+      events, eventsLoading, loadEvents, purchases, loadPurchases, purchasesLoading,
+      conversations, loadConversations, unreadMessagesCount, lastChatMessage, buyTicket, markPurchaseUsed,
       cancelPurchase, markPurchaseRated, activeQR, setActiveQR, toast, showToast, favorites,
       toggleFavorite, ready,
     }}>

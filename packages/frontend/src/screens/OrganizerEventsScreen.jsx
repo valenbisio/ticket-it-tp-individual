@@ -6,6 +6,7 @@ import { Header } from '../components/common/Header.jsx';
 import { BottomTabBar } from '../components/common/BottomTabBar.jsx';
 import { colors, spacing, borderRadius } from '../data/theme.js';
 import { EventListSkeleton } from '../components/common/LoadingSkeleton.jsx';
+import { WelcomeGreeting } from '../components/common/WelcomeGreeting.jsx';
 
 export const OrganizerEventsScreen = () => {
   const router = useRouter();
@@ -117,8 +118,7 @@ export const OrganizerEventsScreen = () => {
             <View style={styles.profileCard}>
               <View style={styles.profileTopRow}>
                 <View>
-                  <Text style={styles.welcomeLabel}>Panel Oficial</Text>
-                  <Text style={styles.orgNameTitle}>{currentUser.name}</Text>
+                  <WelcomeGreeting name={currentUser.name} />
                 </View>
                 <View style={styles.reputationPill}>
                   <Text style={styles.repStar}>★</Text>
@@ -188,18 +188,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-  },
-  welcomeLabel: {
-    color: colors.outline,
-    fontSize: 10,
-    textTransform: 'uppercase',
-    fontWeight: '700',
-  },
-  orgNameTitle: {
-    color: colors.onSurface,
-    fontSize: 18,
-    fontWeight: '800',
-    marginTop: 2,
   },
   reputationPill: {
     flexDirection: 'row',

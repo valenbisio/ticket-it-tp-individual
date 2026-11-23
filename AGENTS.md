@@ -54,13 +54,13 @@ Atajos útiles: `npm start --workspace=backend` y `npm start --prefix packages/f
   - `src/components/common/` — componentes reutilizables de UI (`Header`, `BottomTabBar`, `StatusBadge`, `DynamicQRModal`).
   - `src/contexts/` — estado global con React Context.
     - `AppContext.jsx` — `AppProvider`/`useApp`: usuarios, rol actual, eventos, compras, chats, reseñas, favoritos, toasts y modal QR, junto con las acciones sobre ese estado en memoria.
-    - `auth-context.jsx` — `AuthProvider`/`useAuth` contra los endpoints `/auth` del backend; todavía no está montado en el layout raíz.
+    - `auth-context.jsx` — `AuthProvider`/`useAuth` contra los endpoints `/auth` del backend; está montado en el layout raíz.
   - `src/data/` — datos y diseño.
     - `initialData.js` — datos semilla del frontend (usuarios, eventos, compras, chats, reseñas).
     - `theme.js` — tokens de diseño (`colors`, `spacing`, `borderRadius`).
   - `src/hooks/` — hooks de apoyo (`useEvents`, `usePurchases`, `useChat`, `useReviews`); envuelven `AppContext` o la capa de servicios.
   - `src/utils/` — helpers de dominio del frontend (`purchases.js`: días hasta el evento, etiqueta de días y reglas de cancelación).
-  - `src/services/` — capa destinada a las llamadas HTTP del frontend. Hoy está vacía: varias pantallas y hooks importan `../services/api.js`, que falta implementar.
+  - `src/services/` — capa para las llamadas HTTP del frontend; `api.js` centraliza las solicitudes al backend.
   - `src/App.jsx` y `src/index.css` — restos del prototipo web anterior (router propio por `currentScreen` y Tailwind). La app actual arranca con `expo-router/entry`; no se usan.
   - `assets/` — imágenes, iconos y splash.
   - `app.json` — configuración de Expo. `tsconfig.json` — configuración de tooling y alias `@/*` (no aplica typecheck a `.jsx`).
@@ -168,16 +168,7 @@ Una compra atraviesa distintas etapas que reflejan su situación:
 - No rompas la capa de servicios del frontend haciendo `fetch` desde una pantalla.
 - No elimines ni modifiques los datos semilla sin confirmarlo: los tests y la demo dependen de ellos.
 - No modifiques la descripción de los flujos para que coincida con la implementación actual: los flujos son el contrato funcional del TP y el código debe adaptarse a ellos.
-- No montes autenticación real en el frontend ni reemplaces los usuarios demo sin que se pida: el backend ya expone `/auth`, pero la app sigue usando `juan` (comprador) y `salanorte` (organizador); en el backend los IDs demo son `usuario-1` y `usuario-2`.
-
-## Deuda técnica conocida
-
-- `src/routes/EventosRoute.js` instancia sus propios repositorios, mientras que `src/routes/UsuariosRoute.js` usa el `compraRepository` del seed. Esto puede provocar estados separados entre eventos y compras. Al agregar funcionalidad, unificar la composición de dependencias y compartir los repositorios desde un único punto.
-- `src/services/` está vacío: `useChat`, `useReviews` y varias pantallas (`CreateEventScreen`, `OrganizerEventDetailScreen`, `PurchaseChatScreen`, `RateEventScreen`) importan `../services/api.js`, que no existe. Falta implementar la capa HTTP.
-- `useEvents` y `usePurchases` esperan métodos de `AppContext` que hoy no existen (`loadEvents`, `loadPurchases`, `buyTicket`, `markPurchaseUsed`, `cancelPurchase`, `setActiveQR`); las pantallas usan los nombres actuales (`cancelAndRefundPurchase`, `qrModalPurchase`, etc.). Unificar el contrato.
-- `src/App.jsx` e `src/index.css` son restos del prototipo web con router propio y Tailwind; no participan del arranque de Expo Router.
-- `auth-context.jsx` no está montado en `src/app/_layout.jsx`. El backend ya expone `/auth`, pero el frontend sigue trabajando con los usuarios demo `juan` (comprador) y `salanorte` (organizador).
-- No hay tests de frontend ni script raíz de build/typecheck (el frontend es JSX).
+- No elimines ni reemplaces los usuarios demo del backend sin confirmarlo: las cuentas `buyer@demo.local` (`usuario-1`) y `sala@demo.local` (`usuario-2`) se usan para la demo y los tests. El frontend también permite registrar e iniciar sesión con cuentas propias mediante `/auth`.
 
 ## Flujo de trabajo
 

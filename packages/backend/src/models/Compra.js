@@ -12,6 +12,7 @@ export class Compra {
     cantidad,
     estado = EstadoCompra.PENDIENTE, // EstadoCompra
     mensajes = [], // Mensaje[]
+    mensajesLeidosPor = {},
   }) {
     this.id = id;
     this.comprador = comprador;
@@ -21,6 +22,7 @@ export class Compra {
     this.total = tipoEntrada.precio * cantidad;
     this.estado = estado;
     this.mensajes = mensajes;
+    this.mensajesLeidosPor = { ...mensajesLeidosPor };
   }
 
   actualizarEstado(nuevoEstado) {

@@ -8,6 +8,7 @@ import authRoutes from "./routes/AuthRoute.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 import { errorLogger } from "./middlewares/errorLogger.js";
 import { notFoundHandler } from "./middlewares/notFoundHandler.js";
+import { limiteGeneral } from "./middlewares/rateLimiting.js";
 import { swaggerSpec } from "./swagger.js";
 
 const app = express();
@@ -27,6 +28,8 @@ app.get("/api-docs.json", (req, res) => res.json(swaggerSpec));
 app.get("/", (req, res) => res.redirect("/api-docs"));
 
 // API
+app.use("/api", limiteGeneral);
+app.use("/auth", limiteGeneral);
 app.use("/api/usuarios", usuarioRoutes);
 app.use("/api/eventos", eventoRoutes);
 app.use("/auth", authRoutes);

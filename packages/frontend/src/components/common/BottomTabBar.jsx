@@ -7,7 +7,7 @@ import { colors, spacing, borderRadius } from '../../data/theme.js';
 export const BottomTabBar = () => {
   const router = useRouter();
   const pathname = usePathname();
-  const { currentRole, purchases } = useApp();
+  const { currentRole, purchases, unreadMessagesCount } = useApp();
 
   const buyerActivePurchasesCount = purchases.filter(
     (p) => p.status === 'confirmada' || p.status === 'pendiente de pago'
@@ -16,6 +16,7 @@ export const BottomTabBar = () => {
   if (currentRole === 'buyer') {
     const isExplore = pathname.includes('explore') || pathname === '/' || pathname === '';
     const isPurchases = pathname.includes('purchases');
+    const isMessages = pathname.includes('messages');
     const isProfile = pathname.includes('profile');
 
     return (
@@ -55,7 +56,21 @@ export const BottomTabBar = () => {
           </Text>
         </Pressable>
 
-        {/* Tab 3: Perfil */}
+        <Pressable
+          accessibilityRole="tab"
+          accessibilityLabel={unreadMessagesCount ? `Mensajes, ${unreadMessagesCount} sin leer` : 'Mensajes'}
+          accessibilityState={{ selected: isMessages }}
+          onPress={() => router.push('/messages')}
+          style={styles.tabItem}
+        >
+          <View style={[styles.iconBox, isMessages && styles.activeIconBox]}>
+            <Text style={[styles.iconText, isMessages && styles.activeIconText]}>✉</Text>
+            {unreadMessagesCount > 0 && <View style={styles.badge}><Text style={styles.badgeText}>{unreadMessagesCount > 99 ? '99+' : unreadMessagesCount}</Text></View>}
+          </View>
+          <Text style={[styles.tabLabel, isMessages && styles.activeTabLabel]}>Mensajes</Text>
+        </Pressable>
+
+        {/* Tab: Perfil */}
         <Pressable
           accessibilityRole="tab"
           accessibilityLabel="Ver y editar perfil"
@@ -75,6 +90,7 @@ export const BottomTabBar = () => {
   // Organizer bottom tabs
   const isEvents = pathname.includes('events');
   const isCreate = pathname.includes('create');
+  const isMessages = pathname.includes('messages');
   const isProfile = pathname.includes('profile');
 
   return (
@@ -109,7 +125,21 @@ export const BottomTabBar = () => {
         </Text>
       </Pressable>
 
-      {/* Tab 3: Perfil */}
+      <Pressable
+        accessibilityRole="tab"
+        accessibilityLabel={unreadMessagesCount ? `Mensajes, ${unreadMessagesCount} sin leer` : 'Mensajes'}
+        accessibilityState={{ selected: isMessages }}
+        onPress={() => router.push('/messages')}
+        style={styles.tabItem}
+      >
+        <View style={[styles.iconBox, isMessages && styles.activeIconBox]}>
+          <Text style={[styles.iconText, isMessages && styles.activeIconText]}>✉</Text>
+          {unreadMessagesCount > 0 && <View style={styles.badge}><Text style={styles.badgeText}>{unreadMessagesCount > 99 ? '99+' : unreadMessagesCount}</Text></View>}
+        </View>
+        <Text style={[styles.tabLabel, isMessages && styles.activeTabLabel]}>Mensajes</Text>
+      </Pressable>
+
+      {/* Tab: Perfil */}
       <Pressable
         accessibilityRole="tab"
         accessibilityLabel="Ver y editar perfil"

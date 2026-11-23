@@ -5,12 +5,37 @@ import { CompraService } from "../services/CompraService.js";
 import { validarSchema } from "../middlewares/validarSchema.js";
 import { enviarMensajeSchema } from "../schemas/mensajeSchema.js";
 import { crearReseniaSchema } from "../schemas/reseniaSchema.js";
-import { autenticar, requerirRol } from "./AuthRoute.js";
+import { autenticar, authService, requerirRol } from "./AuthRoute.js";
+import { ChatGateway } from "../services/ChatGateway.js";
 
-const compraService = new CompraService({ compraRepository, usuarioRepository });
+export const chatGateway = new ChatGateway({ authService });
+const compraService = new CompraService({
+  compraRepository,
+  usuarioRepository,
+  publicarMensaje: (event) => chatGateway.publicarMensaje(event),
+});
 const compraController = new CompraController({ compraService });
 
 const router = express.Router();
+
+/**
+ * @swagger
+ * /api/usuarios/{usuarioId}/mensajes:
+ *   get:
+ *     summary: Obtener las conversaciones y mensajes no leídos del usuario autenticado
+ *     tags: [Compras]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: usuarioId
+ *         required: true
+ *         schema: { type: string }
+ *         description: Se conserva por compatibilidad; la identidad efectiva sale del Bearer token.
+ *     responses:
+ *       200: { description: Conversaciones ordenadas por actividad, con cantidad de mensajes no leídos }
+ */
+// Bandeja unificada de conversaciones de compras del usuario autenticado.
+router.get("/:usuarioId/mensajes", autenticar, requerirRol("comprador", "organizador"), (req, res, next) => compraController.obtenerConversaciones(req, res, next));
 
 /**
  * @swagger

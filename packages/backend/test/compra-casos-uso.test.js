@@ -47,7 +47,11 @@ describe("nuevas operaciones de compras y eventos", () => {
   it("permite enviar mensajes al comprador y al organizador", async () => {
     const { compra, service } = contexto();
     await service.enviarMensaje(compra.id, "comprador-1", "Consulta");
+    assert.equal((await service.obtenerConversaciones("organizador-1"))[0].mensajesNoLeidos, 1);
+    await service.obtenerMensajes(compra.id, "organizador-1");
+    assert.equal((await service.obtenerConversaciones("organizador-1"))[0].mensajesNoLeidos, 0);
     await service.enviarMensaje(compra.id, "organizador-1", "Respuesta");
+    assert.equal((await service.obtenerConversaciones("comprador-1"))[0].mensajesNoLeidos, 1);
     assert.equal(compra.mensajes.length, 2);
     const historial = await service.obtenerMensajes(compra.id, "comprador-1");
     assert.equal(historial.length, 2);

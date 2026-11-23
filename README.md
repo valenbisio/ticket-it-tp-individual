@@ -86,6 +86,8 @@ JWT_SECRET=reemplazar-por-un-secreto-aleatorio-de-al-menos-32-caracteres
 
 La API ofrece `POST /auth/registro`, `POST /auth/login`, `GET /auth/me` y `PATCH /auth/perfil`. Registro y login devuelven `{ token, usuario }`; las rutas protegidas reciben `Authorization: Bearer <token>`. En Android/iOS, el token se conserva en SecureStore y se valida al abrir la app. En web queda solo en memoria durante la pestaña actual. Como el backend persiste en memoria, las cuentas registradas se reinician al reiniciar el servidor.
 
+El chat entrega mensajes nuevos en tiempo real por WebSocket (`ws://<host>:8000/ws/chat`). La app autentica cada conexión enviando el JWT como primer mensaje JSON y vuelve a conectarse si se corta la conexión. El backend conserva las conversaciones y los recibos de lectura en memoria.
+
 #### Cuentas de demostración
 
 Todas usan la contraseña `demo1234`:

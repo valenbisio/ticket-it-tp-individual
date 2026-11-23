@@ -45,6 +45,7 @@ export class CompraController {
       const mensajeEnviado = resultado.mensaje;
       return res.status(201).json({
         mensaje: {
+          id: mensajeEnviado.id,
           usuarioId: mensajeEnviado.usuario.id,
           usuario: { id: mensajeEnviado.usuario.id, nombre: mensajeEnviado.usuario.nombre, apellido: mensajeEnviado.usuario.apellido },
           rol: resultado.rol,
@@ -64,6 +65,15 @@ export class CompraController {
         req.usuario.id,
       );
       return res.status(200).json({ compraId: req.params.compraId, mensajes });
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  async obtenerConversaciones(req, res, next) {
+    try {
+      const conversaciones = await this.compraService.obtenerConversaciones(req.usuario.id);
+      return res.status(200).json({ conversaciones });
     } catch (error) {
       return next(error);
     }
